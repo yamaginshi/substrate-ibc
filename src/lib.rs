@@ -350,6 +350,25 @@ decl_module! {
 	}
 }
 
+pub mod ibcrs;
+use ibc::test_utils::get_dummy_account_id;
+use ibc::Height;
+use ibc::ics07_tendermint::header::test_util::get_dummy_ics07_header;
+use ibc::ics02_client::msgs::create_client::MsgCreateAnyClient;
+use ibc::ics07_tendermint::client_state::test_util::get_dummy_tendermint_client_state;
+use ibc::ics07_tendermint::header::test_util::get_dummy_tendermint_header;
+use ibc::ics02_client::client_def::AnyConsensusState::Tendermint;
+use ibc::ics02_client::msgs::ClientMsg;
+use ibc::handler::HandlerOutput;
+use ibc::ics02_client::handler::{dispatch, ClientEvent, ClientResult};
+use crate::ibcrs::client_state::{MockClientRecord};
+use ibc::ics02_client::client_type::ClientType as ClientType_Ibc_Rs;
+use crate::ibcrs::context::IbcContext;
+use ibc::ics24_host::identifier::ClientId;
+use ibc::ics07_tendermint::consensus_state::ConsensusState;
+use ibc::ics24_host::identifier::ClientId as ClientId_Ibc_Rs;
+use std::str::FromStr;
+
 // The main implementation block for the module.
 impl<T: Trait> Module<T> {
     /// Create an IBC client, by the 2 major steps:
@@ -405,6 +424,60 @@ impl<T: Trait> Module<T> {
 
         Self::deposit_event(RawEvent::ClientCreated);
         Ok(())
+    }
+
+    pub fn create_client_ibc_rs(
+    ) {
+        let client_id = ClientId_Ibc_Rs::from_str("ibc-client").unwrap();
+        let ctx = IbcContext::default();
+        let signer = get_dummy_account_id();
+        let height = Height::new(0, 42);
+
+        let header = get_dummy_ics07_header();
+        let msg = MsgCreateAnyClient::new(
+            client_id,
+            get_dummy_tendermint_client_state(get_dummy_tendermint_header()),
+            Tendermint(ConsensusState::from(header)),
+            signer,
+        )
+            .unwrap();
+
+        let output = dispatch(&ctx, ClientMsg::CreateClient(msg.clone()));
+
+        match output {
+            Ok(HandlerOutput {
+                   result,
+                   events,
+                   log,
+               }) => match result {
+                ClientResult::Create(create_result) => {
+                    assert_eq!(create_result.client_type, ClientType_Ibc_Rs::Tendermint);
+                    assert_eq!(
+                        events,
+                        vec![ClientEvent::ClientCreated(msg.client_id()).into()]
+                    );
+                    assert_eq!(log, vec!["success: no client state found".to_string(),]);
+
+                    let cs_height = height.clone();
+                    let consensus_states = vec![(cs_height, create_result.consensus_state)].into_iter().collect();
+
+                    let client_record = MockClientRecord {
+                        client_type: create_result.client_type,
+                        client_state: Some(create_result.client_state),
+                        consensus_states,
+                    };
+
+                    ConsensusStates::insert((msg.client_id().clone(), height.clone()), consensus_states);
+                    ClientStates::insert(&msg.client_id().clone(), client_record);
+                }
+                _ => {
+                    panic!("unexpected result type: expected ClientResult::CreateResult!");
+                }
+            },
+            Err(err) => {
+                panic!("unexpected error: {}", err);
+            }
+        }
     }
 
     /// Initialize an IBC connection opening handshake.

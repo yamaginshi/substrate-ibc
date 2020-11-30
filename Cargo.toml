@@ -28,9 +28,13 @@ sp-io = { default-features = false, version = '2.0.0' }
 sp-runtime = { default-features = false, version = '2.0.0' }
 sp-std = { default-features = false, version = '2.0.0' }
 sp-trie = { default-features = false, version = '2.0.0' }
+ibc = { git = "https://github.com/livelybug/ibc-rs.git", features = ["mocks"] }
 
 [dev-dependencies]
 hex = '0.4.0'
+tokio = { version = "0.3", features = ["macros"] }
+subtle-encoding = { version = "0.5" }
+tendermint-testgen = { version = "0.17.0-rc2" } # Needed for generating (synthetic) light blocks.
 
 [dependencies.finality-grandpa]
 default-features = false
@@ -45,6 +49,23 @@ version = '0.15.2'
 default-features = false
 optional = true
 version = '1.0.101'
+
+[dependencies.tendermint]
+version = "=0.17.0-rc3"
+
+[dependencies.tendermint-rpc]
+version = "=0.17.0-rc3"
+features = ["http-client", "websocket-client"]
+
+[dependencies.tendermint-light-client]
+version = "=0.17.0-rc3"
+
+[dependencies.tendermint-proto]
+version = "=0.17.0-rc3"
+
+[dependencies.tendermint-testgen]
+version = "0.17.0-rc2"
+optional = true
 
 [features]
 default = ['std']
