@@ -81,6 +81,8 @@ mod mock;
 #[cfg(test)]
 mod tests;
 
+use crate::ibcrs::encode_ibc_rs::ConsensusState;
+
 type BlockNumber = u32;
 type Block = generic::Block<generic::Header<BlockNumber, BlakeTwo256>, UncheckedExtrinsic>;
 
@@ -256,6 +258,7 @@ decl_storage! {
 	trait Store for Module<T: Trait> as Ibc {
 		ClientStates: map hasher(blake2_128_concat) H256 => grandpa::client_state::ClientState; // client_id => ClientState
 		ConsensusStates: map hasher(blake2_128_concat) (H256, u32) => grandpa::consensus_state::ConsensusState; // (client_id, height) => ConsensusState
+		ConsensusStatesTdm: map hasher(blake2_128_concat) (H256, u64) => ConsensusState; // (client_id, height) => ConsensusState
 		Connections: map hasher(blake2_128_concat) H256 => ConnectionEnd; // connection_identifier => ConnectionEnd
 		Ports: map hasher(blake2_128_concat) Vec<u8> => u8; // port_identifier => module_index
 		/// Channel structures are stored under a store path prefix unique to a combination of a port identifier and channel identifier.
@@ -364,12 +367,16 @@ use ibc::ics02_client::handler::{dispatch, ClientEvent, ClientResult};
 use crate::ibcrs::client_state::{MockClientRecord};
 use ibc::ics02_client::client_type::ClientType as ClientType_Ibc_Rs;
 use crate::ibcrs::context::IbcContext;
-use ibc::ics24_host::identifier::ClientId;
-use ibc::ics07_tendermint::consensus_state::ConsensusState;
+use ibc::ics07_tendermint::consensus_state::ConsensusState as ConsensusState_Ibc_Rs;
 use ibc::ics24_host::identifier::ClientId as ClientId_Ibc_Rs;
 use std::str::FromStr;
-
+use sp_core::{Blake2Hasher, Hasher};
+use ibc::ics23_commitment::commitment::CommitmentRoot;
+use tendermint::Hash as TdmHash;
+use std::time::UNIX_EPOCH;
+// use tendermint::SHA256_HASH_SIZE;  // Todo: import SHA256_HASH_SIZE
 // The main implementation block for the module.
+
 impl<T: Trait> Module<T> {
     /// Create an IBC client, by the 2 major steps:
     /// * Insert concensus state into storage "ConsensusStates"
@@ -437,7 +444,7 @@ impl<T: Trait> Module<T> {
         let msg = MsgCreateAnyClient::new(
             client_id,
             get_dummy_tendermint_client_state(get_dummy_tendermint_header()),
-            Tendermint(ConsensusState::from(header)),
+            Tendermint(ConsensusState_Ibc_Rs::from(header)),
             signer,
         )
             .unwrap();
@@ -459,7 +466,7 @@ impl<T: Trait> Module<T> {
                     assert_eq!(log, vec!["success: no client state found".to_string(),]);
 
                     let cs_height = height.clone();
-                    let consensus_states = vec![(cs_height, create_result.consensus_state)].into_iter().collect();
+                    let consensus_states = vec![(cs_height, create_result.consensus_state.clone())].into_iter().collect();
 
                     let client_record = MockClientRecord {
                         client_type: create_result.client_type,
@@ -467,8 +474,31 @@ impl<T: Trait> Module<T> {
                         consensus_states,
                     };
 
-                    ConsensusStates::insert((msg.client_id().clone(), height.clone()), consensus_states);
-                    ClientStates::insert(&msg.client_id().clone(), client_record);
+                    let client_id = Blake2Hasher::hash(msg.client_id().clone().as_bytes());
+                    match create_result.consensus_state.clone() {
+                        Tendermint(cs) => {
+                            let CommitmentRoot(root) = cs.root;
+                            let ts = cs.timestamp.to_system_time().unwrap().duration_since(UNIX_EPOCH).unwrap().as_millis();
+                            let mut nv_hash:[u8; 32] = [0; 32];
+                            match cs.next_validators_hash {
+                                TdmHash::Sha256(sha) => {
+                                    nv_hash = sha;
+                                }
+                                _ => { println!("Error: No client type matched!"); }  // Todo: throw exception
+                            }
+
+                            let csst = ConsensusState {
+                                timestamp: ts,
+                                root,
+                                next_validators_hash: nv_hash,
+                            };
+                            ConsensusStatesTdm::insert((client_id, height.version_height), csst);  // Todo: Add height.version_number
+                        }
+
+                        _ => {}
+                    }
+
+                    // ClientStates::insert(&msg.client_id().clone(), client_record);
                 }
                 _ => {
                     panic!("unexpected result type: expected ClientResult::CreateResult!");

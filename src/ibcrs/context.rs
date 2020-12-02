@@ -1,20 +1,14 @@
-use ibc::ics02_client::context::{ClientKeeper, ClientReader};
+use ibc::ics02_client::context::ClientReader;
 use ibc::ics02_client::client_type::ClientType;
 use ibc::ics02_client::client_def::{AnyClientState, AnyConsensusState};
 use ibc::Height;
 use ibc::ics24_host::identifier::{ChainId, ClientId, ConnectionId};
 use ibc::mock::host::{HostBlock, HostType};
-use ibc::mock::client_state::{MockClientRecord, MockClientState, MockConsensusState};
+use ibc::mock::client_state::MockClientRecord;
 use ibc::ics03_connection::connection::ConnectionEnd;
-
-// use crate::client::ClientType;
-use sp_core::{Blake2Hasher, Hasher, H256};
 
 use std::cmp::min;
 use std::collections::HashMap;
-use std::error::Error;
-use std::str::FromStr;
-use tendermint::account::Id;
 
 pub struct IbcContext {
     /// The type of host chain underlying this mock context.
