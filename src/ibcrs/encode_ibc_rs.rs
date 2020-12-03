@@ -1,6 +1,5 @@
 use codec::{Encode, Decode};
 use sp_runtime::RuntimeDebug;
-use std::time::Duration;
 use sp_core::H256;
 
 #[derive(Clone, Default, Encode, Decode, RuntimeDebug)]
@@ -26,15 +25,15 @@ pub struct Height {
 #[derive(Clone, Default, Encode, Decode, RuntimeDebug)]
 pub struct ClientState {
     pub chain_id: H256,
-    pub trust_level: TrustThresholdFraction,
-    pub trusting_period: Duration,
-    pub unbonding_period: Duration,
-    pub max_clock_drift: Duration,
+    pub trust_level: Vec<u8>,
+    pub trusting_period: u64,
+    pub unbonding_period: u64,
+    pub max_clock_drift: u64,
     pub frozen_height: Height,
     pub latest_height: Height,
-    // pub consensus_params: Params,
-    // pub upgrade_path: String,
-    // pub allow_update_after_expiry: bool,
-    // pub allow_update_after_misbehaviour: bool,
+    pub consensus_params: Vec<u8>,
+    pub upgrade_path: Vec<u8>,
+    pub allow_update_after_expiry: bool,
+    pub allow_update_after_misbehaviour: bool,
 }
 

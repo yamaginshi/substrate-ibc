@@ -81,7 +81,8 @@ mod mock;
 #[cfg(test)]
 mod tests;
 
-use crate::ibcrs::encode_ibc_rs::ConsensusState;
+use crate::ibcrs::encode_ibc_rs::ConsensusState as ConsensusState_Tdm;
+use crate::ibcrs::encode_ibc_rs::ClientState as ClientStateTdm;
 
 type BlockNumber = u32;
 type Block = generic::Block<generic::Header<BlockNumber, BlakeTwo256>, UncheckedExtrinsic>;
@@ -257,8 +258,9 @@ decl_storage! {
 	// This name may be updated, but each pallet in the runtime must use a unique name.
 	trait Store for Module<T: Trait> as Ibc {
 		ClientStates: map hasher(blake2_128_concat) H256 => grandpa::client_state::ClientState; // client_id => ClientState
+		ClientStatesTdm: map hasher(blake2_128_concat) H256 => ClientStateTdm; // client_id => ClientStateTdm
 		ConsensusStates: map hasher(blake2_128_concat) (H256, u32) => grandpa::consensus_state::ConsensusState; // (client_id, height) => ConsensusState
-		ConsensusStatesTdm: map hasher(blake2_128_concat) (H256, u64) => ConsensusState; // (client_id, height) => ConsensusState
+		ConsensusStatesTdm: map hasher(blake2_128_concat) (H256, u64) => ConsensusState_Tdm; // (client_id, height) => ConsensusState_Tdm
 		Connections: map hasher(blake2_128_concat) H256 => ConnectionEnd; // connection_identifier => ConnectionEnd
 		Ports: map hasher(blake2_128_concat) Vec<u8> => u8; // port_identifier => module_index
 		/// Channel structures are stored under a store path prefix unique to a combination of a port identifier and channel identifier.
@@ -355,7 +357,7 @@ decl_module! {
 
 pub mod ibcrs;
 use ibc::test_utils::get_dummy_account_id;
-use ibc::Height;
+// use ibc::Height;
 use ibc::ics07_tendermint::header::test_util::get_dummy_ics07_header;
 use ibc::ics02_client::msgs::create_client::MsgCreateAnyClient;
 use ibc::ics07_tendermint::client_state::test_util::get_dummy_tendermint_client_state;
@@ -364,17 +366,20 @@ use ibc::ics02_client::client_def::AnyConsensusState::Tendermint;
 use ibc::ics02_client::msgs::ClientMsg;
 use ibc::handler::HandlerOutput;
 use ibc::ics02_client::handler::{dispatch, ClientEvent, ClientResult};
-use crate::ibcrs::client_state::{MockClientRecord};
 use ibc::ics02_client::client_type::ClientType as ClientType_Ibc_Rs;
 use crate::ibcrs::context::IbcContext;
+use crate::ibcrs::encode_ibc_rs::Height;
 use ibc::ics07_tendermint::consensus_state::ConsensusState as ConsensusState_Ibc_Rs;
-use ibc::ics24_host::identifier::ClientId as ClientId_Ibc_Rs;
+use ibc::ics24_host::identifier::ClientId as ClientIdIbcRs;
 use std::str::FromStr;
 use sp_core::{Blake2Hasher, Hasher};
 use ibc::ics23_commitment::commitment::CommitmentRoot;
 use tendermint::Hash as TdmHash;
 use std::time::UNIX_EPOCH;
 // use tendermint::SHA256_HASH_SIZE;  // Todo: import SHA256_HASH_SIZE
+use ibc::ics02_client::client_def::AnyClientState;
+use serde::{Serialize, Deserialize};
+
 // The main implementation block for the module.
 
 impl<T: Trait> Module<T> {
@@ -435,10 +440,10 @@ impl<T: Trait> Module<T> {
 
     pub fn create_client_ibc_rs(
     ) {
-        let client_id = ClientId_Ibc_Rs::from_str("ibc-client").unwrap();
+        let client_id = ClientIdIbcRs::from_str("ibc-client").unwrap();
         let ctx = IbcContext::default();
         let signer = get_dummy_account_id();
-        let height = Height::new(0, 42);
+        let height = ibc::Height::new(0, 42);
 
         let header = get_dummy_ics07_header();
         let msg = MsgCreateAnyClient::new(
@@ -446,8 +451,7 @@ impl<T: Trait> Module<T> {
             get_dummy_tendermint_client_state(get_dummy_tendermint_header()),
             Tendermint(ConsensusState_Ibc_Rs::from(header)),
             signer,
-        )
-            .unwrap();
+        ).unwrap();
 
         let output = dispatch(&ctx, ClientMsg::CreateClient(msg.clone()));
 
@@ -465,40 +469,47 @@ impl<T: Trait> Module<T> {
                     );
                     assert_eq!(log, vec!["success: no client state found".to_string(),]);
 
-                    let cs_height = height.clone();
-                    let consensus_states = vec![(cs_height, create_result.consensus_state.clone())].into_iter().collect();
-
-                    let client_record = MockClientRecord {
-                        client_type: create_result.client_type,
-                        client_state: Some(create_result.client_state),
-                        consensus_states,
-                    };
-
                     let client_id = Blake2Hasher::hash(msg.client_id().clone().as_bytes());
                     match create_result.consensus_state.clone() {
                         Tendermint(cs) => {
                             let CommitmentRoot(root) = cs.root;
                             let ts = cs.timestamp.to_system_time().unwrap().duration_since(UNIX_EPOCH).unwrap().as_millis();
-                            let mut nv_hash:[u8; 32] = [0; 32];
                             match cs.next_validators_hash {
-                                TdmHash::Sha256(sha) => {
-                                    nv_hash = sha;
+                                TdmHash::Sha256(nv_hash) => {
+                                    let csst = ConsensusState_Tdm {
+                                        timestamp: ts,
+                                        root,
+                                        next_validators_hash: nv_hash,
+                                    };
+                                    ConsensusStatesTdm::insert((client_id, height.version_height), csst);  // Todo: Add height.version_number
                                 }
                                 _ => { println!("Error: No client type matched!"); }  // Todo: throw exception
                             }
 
-                            let csst = ConsensusState {
-                                timestamp: ts,
-                                root,
-                                next_validators_hash: nv_hash,
-                            };
-                            ConsensusStatesTdm::insert((client_id, height.version_height), csst);  // Todo: Add height.version_number
-                        }
+                            // Todo: create_result.client_state.chain_id() is not complete
+                            match create_result.client_state {
+                                AnyClientState::Tendermint(tdms) => {
+                                    let chain_id = Blake2Hasher::hash(tdms.chain_id.clone().as_bytes());
+                                    let trust_level = bincode::serialize(&tdms.trust_level).unwrap();
+                                    let trusting_period = tdms.trusting_period.as_secs();
+                                    let unbonding_period = tdms.unbonding_period.as_secs();
+                                    let max_clock_drift = tdms.max_clock_drift.as_secs();
+                                    let frozen_height = Height {version_number: tdms.frozen_height.version_number, version_height: tdms.frozen_height.version_height};
+                                    let latest_height = Height {version_number: tdms.latest_height.version_number, version_height: tdms.latest_height.version_height};
+                                    let consensus_params = bincode::serialize(&tdms.consensus_params).unwrap();
+                                    let upgrade_path = (*tdms.upgrade_path.as_bytes()).to_vec();
+                                    let allow_update_after_expiry = tdms.allow_update_after_expiry;
+                                    let allow_update_after_misbehaviour = tdms.allow_update_after_misbehaviour;
 
+                                    let clientstate_tdm = ClientStateTdm {chain_id, trust_level, trusting_period, unbonding_period, max_clock_drift, frozen_height, latest_height,
+                                        consensus_params, upgrade_path, allow_update_after_expiry, allow_update_after_misbehaviour};
+                                    ClientStatesTdm::insert(client_id.clone(), clientstate_tdm);
+                                }
+                                _ => {}
+                            }
+                        }
                         _ => {}
                     }
-
-                    // ClientStates::insert(&msg.client_id().clone(), client_record);
                 }
                 _ => {
                     panic!("unexpected result type: expected ClientResult::CreateResult!");

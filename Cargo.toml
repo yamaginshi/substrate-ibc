@@ -31,6 +31,7 @@ sp-trie = { default-features = false, version = '2.0.0' }
 sp-timestamp = { default-features = false, version = '2.0.0' }
 ibc = { git = "https://github.com/livelybug/ibc-rs.git", features = ["mocks"] }
 protobuf = "2.18.1"
+bincode = "1.3.1"
 
 [dev-dependencies]
 hex = '0.4.0'

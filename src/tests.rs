@@ -21,7 +21,8 @@ fn create_client_func() {
 #[test]
 fn create_client_should_work() {
 	new_test_ext().execute_with(|| {
-		create_client_func()
+		// create_client_func()
+        IbcModule::create_client_ibc_rs()
 	});
 }
 

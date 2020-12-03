@@ -28,7 +28,7 @@ pub struct IbcContext {
     history: Vec<HostBlock>,
 
     /// The set of all clients, indexed by their id.
-    clients: HashMap<ClientId, MockClientRecord>,
+    // clients: HashMap<ClientId, MockClientRecord>,
 
     /// Association between client ids and connection ids.
     client_connections: HashMap<ClientId, ConnectionId>,
@@ -50,27 +50,30 @@ impl Default for IbcContext {
 
 impl ClientReader for IbcContext {
     fn client_type(&self, client_id: &ClientId) -> Option<ClientType> {
-        match self.clients.get(client_id) {
-            Some(client_record) => client_record.client_type.into(),
-            None => None,
-        }
+        // match self.clients.get(client_id) {
+        //     Some(client_record) => client_record.client_type.into(),
+        //     None => None,
+        // }
+        None
     }
 
     fn client_state(&self, client_id: &ClientId) -> Option<AnyClientState> {
-        match self.clients.get(client_id) {
-            Some(client_record) => client_record.client_state.clone(),
-            None => None,
-        }
+        // match self.clients.get(client_id) {
+        //     Some(client_record) => client_record.client_state.clone(),
+        //     None => None,
+        // }
+        None
     }
 
     fn consensus_state(&self, client_id: &ClientId, height: Height) -> Option<AnyConsensusState> {
-        match self.clients.get(client_id) {
-            Some(client_record) => match client_record.consensus_states.get(&height) {
-                Some(consensus_state) => Option::from(consensus_state.clone()),
-                None => None,
-            },
-            None => None,
-        }
+        // match self.clients.get(client_id) {
+        //     Some(client_record) => match client_record.consensus_states.get(&height) {
+        //         Some(consensus_state) => Option::from(consensus_state.clone()),
+        //         None => None,
+        //     },
+        //     None => None,
+        // }
+        None
     }
 }
 
@@ -115,7 +118,7 @@ impl IbcContext {
                 })
                 .collect(),
             connections: Default::default(),
-            clients: Default::default(),
+            // clients: Default::default(),
             client_connections: Default::default(),
         }
     }
