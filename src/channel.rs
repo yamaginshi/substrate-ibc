@@ -22,7 +22,7 @@ use ibc::Height;
 use tendermint_proto::Protobuf;
 use ibc::ics05_port::context::PortReader;
 
-impl<T: Config> ChannelReader for Context<T> {
+impl<T: Config> ChannelReader for Context<T> { // Todo: Confirm if all the errors are accurate
 	/// Returns the ChannelEnd for the given `port_id` and `chan_id`.
 	fn channel_end(&self, port_channel_id: &(PortId, ChannelId)) -> Result<ChannelEnd,ICS04Error > {
 		log::info!("in channel: [channel_end]");
@@ -40,8 +40,7 @@ impl<T: Config> ChannelReader for Context<T> {
 			Ok(channel_end)
 		} else {
 			log::info!("read channel_end return None");
-
-			todo!()
+			Err(ICS04Error::channel_not_found(port_channel_id.clone().0, port_channel_id.clone().1))
 		}
 	}
 
@@ -56,8 +55,7 @@ impl<T: Config> ChannelReader for Context<T> {
 			Ok(ret)
 		} else {
 			log::info!("read connection end returns None");
-
-			todo!()
+			Err(ICS04Error::connection_not_open(connection_id.clone()))
 		}
 	}
 
@@ -83,7 +81,7 @@ impl<T: Config> ChannelReader for Context<T> {
 			log::info!("in channel: [connection_channels] >> result: {:?}", result);
 			Ok(result)
 		} else {
-			todo!()
+			Err(ICS04Error::connection_not_open(conn_id.clone()))
 		}
 	}
 
@@ -99,8 +97,7 @@ impl<T: Config> ChannelReader for Context<T> {
 			Ok(AnyClientState::decode_vec(&*data).unwrap())
 		} else {
 			log::info!("In client: [client_state] >> read client_state is None");
-
-			todo!()
+			Err(ICS04Error::frozen_client(client_id.clone()))
 		}
 	}
 
@@ -120,7 +117,7 @@ impl<T: Config> ChannelReader for Context<T> {
 				return Ok(any_consensus_state);
 			}
 		}
-		todo!()
+		Err(ICS04Error::frozen_client(client_id.clone()))
 		// ClientReader::consensus_state(self, client_id, height)
 	}
 
@@ -159,7 +156,7 @@ impl<T: Config> ChannelReader for Context<T> {
 		} else {
 			log::info!("read get next sequence send return None");
 
-			todo!()
+			Err(ICS04Error::missing_next_recv_seq(port_channel_id.clone()))
 		}
 	}
 
@@ -179,8 +176,7 @@ impl<T: Config> ChannelReader for Context<T> {
 			Ok(Sequence::from(seq))
 		} else {
 			log::info!("read get next sequence recv return None");
-
-			todo!()
+			Err(ICS04Error::missing_next_recv_seq(port_channel_id.clone()))
 		}
 	}
 
@@ -200,12 +196,11 @@ impl<T: Config> ChannelReader for Context<T> {
 			Ok(Sequence::from(seq))
 		} else {
 			log::info!("read get next sequence ack return None");
-
-			todo!()
+			Err(ICS04Error::missing_next_recv_seq(port_channel_id.clone()))
 		}
 	}
 
-		fn get_packet_commitment(&self, key: &(PortId, ChannelId, Sequence)) -> Result<String, ICS04Error> {
+	fn get_packet_commitment(&self, key: &(PortId, ChannelId, Sequence)) -> Result<String, ICS04Error> {
 		log::info!("in channel: [get_packet_commitment]");
 
 		let seq = u64::from(key.2);
@@ -226,7 +221,7 @@ impl<T: Config> ChannelReader for Context<T> {
 		} else {
 			log::info!("read get packet commitment return None");
 
-			todo!()
+			Err(ICS04Error::packet_commitment_not_found(key.2))
 		}
 	}
 
@@ -252,9 +247,8 @@ impl<T: Config> ChannelReader for Context<T> {
 			};
 			Ok(data)
 		} else {
-			log::info!("read get packet receipt return None");
-
-			todo!()
+			log::info!("read get packet receipt not found");
+			Err(ICS04Error::packet_receipt_not_found(key.2))
 		}
 	}
 
@@ -277,9 +271,8 @@ impl<T: Config> ChannelReader for Context<T> {
 			let mut data: &[u8] = &data;
 			Ok(String::decode(&mut data).unwrap())
 		} else {
-			log::info!("read get acknowledgement return None");
-
-			todo!()
+			log::info!("get acknowledgement not found");
+			Err(ICS04Error::packet_acknowledgement_not_found(key.2))
 		}
 	}
 
@@ -336,7 +329,7 @@ impl<T: Config> ChannelKeeper for Context<T> {
 
 		<PacketCommitment<T>>::insert(
 			(key.0.as_bytes(), key.1.as_bytes(), seq),
-			ChannelReader::hash(self, input).as_bytes(),
+			ChannelReader::hash(self, input).encode(),
 		);
 		Ok(())
 	}
@@ -389,7 +382,7 @@ impl<T: Config> ChannelKeeper for Context<T> {
 
 		<Acknowledgements<T>>::insert(
 			(key.0.as_bytes(), key.1.as_bytes(), seq),
-			ChannelReader::hash(self, ack).as_bytes(),
+			ChannelReader::hash(self, ack).encode(),
 		);
 		Ok(())
 	}

@@ -172,7 +172,7 @@ pub mod primitive {
     impl From<IbcTimestamp> for Timestamp {
         fn from(val : IbcTimestamp) -> Self {
             Self {
-                time: val.to_string(),
+                time: val.as_nanoseconds().to_string(),
             }
         }
     }
@@ -240,8 +240,7 @@ pub mod primitive {
                 destination_channel: self.destination_channel.to_ibc_channel_id(),
                 data: self.data,
                 timeout_height: self.timeout_height.to_ibc_height(),
-                timeout_timestamp: IbcTimestamp::now(),
-                // timeout_timestamp: self.timeout_timestamp.to_ibc_timestamp(),
+                timeout_timestamp: self.timeout_timestamp.to_ibc_timestamp(),
             }
         }
     }
