@@ -85,11 +85,11 @@ impl<T: Config> ClientReader for Context<T> {
 		}
 
 		// TODO
-		// Err(ICS02Error::consensus_state_not_found(client_id.clone(), native_height))
+		Err(ICS02Error::consensus_state_not_found(client_id.clone(), height))
 		// if not find any_consensus_state at height will be return an default value consensus state
-		Ok(AnyConsensusState::Grandpa(
-			ibc::clients::ics10_grandpa::consensus_state::ConsensusState::default(),
-		))
+		// Ok(AnyConsensusState::Grandpa(
+		// 	ibc::clients::ics10_grandpa::consensus_state::ConsensusState::default(),
+		// ))
 	}
 
 	fn next_consensus_state(&self, client_id: &ClientId, height: Height) -> Result<Option<AnyConsensusState>, ICS02Error> {
@@ -120,9 +120,10 @@ impl<T: Config> ClientReader for Context<T> {
 		}
 
 
-		Ok(Some(AnyConsensusState::Grandpa(
-			ibc::clients::ics10_grandpa::consensus_state::ConsensusState::default(),
-		)))
+		Err(ICS02Error::consensus_state_not_found(client_id.clone(), height))
+		// Ok(Some(AnyConsensusState::Grandpa(
+		// 	ibc::clients::ics10_grandpa::consensus_state::ConsensusState::default(),
+		// )))
 	}
 
 	fn prev_consensus_state(&self, client_id: &ClientId, height: Height) -> Result<Option<AnyConsensusState>, ICS02Error> {
@@ -152,9 +153,10 @@ impl<T: Config> ClientReader for Context<T> {
 			}
 		}
 
-		Ok(Some(AnyConsensusState::Grandpa(
-			ibc::clients::ics10_grandpa::consensus_state::ConsensusState::default(),
-		)))
+		Err(ICS02Error::consensus_state_not_found(client_id.clone(), height))
+		// Ok(Some(AnyConsensusState::Grandpa(
+		// 	ibc::clients::ics10_grandpa::consensus_state::ConsensusState::default(),
+		// )))
 	}
 
 	fn host_height(&self) -> Height {
@@ -266,7 +268,15 @@ impl<T: Config> ClientKeeper for Context<T> {
 		let height = height.encode_vec().unwrap();
 		let data = consensus_state.encode_vec().unwrap();
 		if <ConsensusStates<T>>::contains_key(client_id.as_bytes()) {
-			// consensus_state is stored after mmr root updated
+			// if consensus_state is no empty use push insert an exist ConsensusStates
+			<ConsensusStates<T>>::try_mutate(
+				client_id.as_bytes(),
+				|val| -> Result<(), &'static str> {
+					val.push((height, data));
+					Ok(())
+				},
+			)
+			.expect("store consensus state error");
 		} else {
 			// if consensus state is empty insert a new item.
 			<ConsensusStates<T>>::insert(client_id.as_bytes(), vec![(height, data)]);

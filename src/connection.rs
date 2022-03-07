@@ -121,7 +121,7 @@ impl<T: Config> ConnectionReader for Context<T> {
 
 	fn host_consensus_state(&self, _height: Height) -> Result<AnyConsensusState, ICS03Error> {
 		log::info!("in connection : [host_consensus_state] >> _height = {:?}", _height);
-		let result = AnyConsensusState::Grandpa(GPConsensusState::from(Header::default()));
+		let result = AnyConsensusState::Grandpa(GPConsensusState::default());
 
 		log::info!(
 			"in connection : [host_consensus_state] >> any_consensus_state = {:?}",

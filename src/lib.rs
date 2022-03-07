@@ -51,11 +51,13 @@ extern crate alloc;
 pub use pallet::*;
 
 use alloc::{format, string::String};
+use crate::alloc::string::ToString;
 use beefy_light_client::commitment;
 use codec::{Decode, Encode};
 use core::marker::PhantomData;
 use frame_system::ensure_signed;
 use ibc::core::ics02_client::client_state::AnyClientState;
+use ibc::core::ics02_client::client_consensus::AnyConsensusState;
 use ibc::core::ics02_client::height;
 use ibc::clients::ics10_grandpa::client_state::ClientState;
 use ibc::clients::ics10_grandpa::help;
@@ -785,7 +787,7 @@ pub mod pallet {
 					value: message.value.clone(),
 				})
 				.collect();
-			let result = ibc::core::ics26_routing::handler::deliver(&mut ctx, messages).unwrap();
+			let result = ibc::core::ics26_routing::handler::deliver(&mut ctx, messages).unwrap_or_else(|value| vec![IbcEvent::ChainError(value.to_string())]);
 
 			log::info!("result: {:?}", result);
 
@@ -890,6 +892,8 @@ pub mod pallet {
 				&mmr_leaf_proof,
 			);
 
+			// TODO
+			// we can update mmr root save into consensus_state
 			match result {
 				Ok(_) => {
 					log::info!("update the beefy light client sucesse! and the beefy light client state is : {:?} \n",light_client);
@@ -923,36 +927,25 @@ pub mod pallet {
 					})
 					.expect("store client_state keys error");
 
-					log::info!("the updated client state is : {:?}", client_state);
-
-					use ibc::clients::ics10_grandpa::consensus_state::ConsensusState as GPConsensusState;
-					use ibc::core::ics02_client::client_consensus::AnyConsensusState;
-
-					let mut consensus_state = GPConsensusState::new(client_state.block_header.clone());
-					consensus_state.digest = client_state.latest_commitment.payload.clone();
-					let any_consensus_state = AnyConsensusState::Grandpa(consensus_state);
-
-					let height = ibc::Height{
-						revision_number: 0,
-						revision_height: client_state.block_number as u64,
-					};
-
-					log::info!("in ibc-lib : [store_consensus_state] >> client_id: {:?}, height = {:?}, consensus_state = {:?}",client_id.clone(), height, any_consensus_state);
-
-					let height = height.encode_vec().unwrap();
-					let data = any_consensus_state.encode_vec().unwrap();
+					// save every time mmr root into consensus state 
+					let grandpa_consensus_state = ibc::clients::ics10_grandpa::consensus_state::ConsensusState::new(client_state.latest_commitment.payload.clone());
+					
+					let consensus_stata_data = AnyConsensusState::Grandpa(grandpa_consensus_state).encode_vec().unwrap();
+					
+					let consensus_state_height = ibc::Height::new(0, latest_commitment.block_number as u64).encode_vec().unwrap();
 					if <ConsensusStates<T>>::contains_key(client_id.clone()) {
 						// if consensus_state is no empty use push insert an exist ConsensusStates
 						<ConsensusStates<T>>::try_mutate(
 							client_id.clone(),
 							|val| -> Result<(), &'static str> {
-								val.push((height, data));
+								val.push((consensus_state_height, consensus_stata_data));
 								Ok(())
 							},
-						).expect("store consensus state error");
+						)
+							.expect("store consensus state error");
 					} else {
 						// if consensus state is empty insert a new item.
-						<ConsensusStates<T>>::insert(client_id.clone(), vec![(height, data)]);
+						<ConsensusStates<T>>::insert(client_id.clone(), vec![(consensus_state_height, consensus_stata_data)]);
 					}
 
 					// emit update state sucesse event
