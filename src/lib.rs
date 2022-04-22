@@ -1396,6 +1396,8 @@ pub mod pallet {
 					},
 					_ => {
 						log::warn!("Unhandled event: {:?}", event);
+						Self::deposit_event(event.clone().into());
+
 					},
 				}
 			}
