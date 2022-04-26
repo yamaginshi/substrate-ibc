@@ -63,7 +63,7 @@ pub mod primitive {
 
 	impl From<IbcChannelId> for ChannelId {
 		fn from(value: IbcChannelId) -> Self {
-			let value = value.0.as_bytes().to_vec();
+			let value = alloc::format!("{}", value).as_bytes().to_vec();
 			Self(value)
 		}
 	}
@@ -71,7 +71,7 @@ pub mod primitive {
 	impl ChannelId {
 		pub fn to_ibc_channel_id(self) -> Result<IbcChannelId, Error> {
 			let value = String::from_utf8(self.0).map_err(|_| Error::invalid_from_utf8())?;
-			Ok(IbcChannelId(value))
+			Ok(IbcChannelId::from_str(&value).unwrap())
 		}
 	}
 

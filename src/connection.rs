@@ -77,9 +77,7 @@ impl<T: Config> ConnectionReader for Context<T> {
 	}
 
 	fn connection_counter(&self) -> Result<u64, Ics03Error> {
-		log::trace!(
-			"in connection : [connection_counter]"
-		);
+		log::trace!("in connection : [connection_counter]");
 
 		Ok(<ConnectionCounter<T>>::get())
 	}
@@ -95,9 +93,7 @@ impl<T: Config> ConnectionReader for Context<T> {
 		client_id: &ClientId,
 		height: Height,
 	) -> Result<AnyConsensusState, Ics03Error> {
-		log::trace!(
-			"in connection : [client_consensus_state]"
-		);
+		log::trace!("in connection : [client_consensus_state]");
 
 		// ClientReader::consensus_state(self, client_id, height)
 		let height = height.encode_vec().map_err(|e| Ics03Error::invalid_encode(e))?;

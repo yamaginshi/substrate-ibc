@@ -57,9 +57,7 @@ impl<T: Config> ClientReader for Context<T> {
 		client_id: &ClientId,
 		height: Height,
 	) -> Result<AnyConsensusState, Ics02Error> {
-		log::trace!(
-			"in client : [consensus_state]"
-		);
+		log::trace!("in client : [consensus_state]");
 
 		let mut values = <ConsensusStates<T>>::get(client_id.as_bytes());
 		values.sort_by(|(height_left, _), (height_right, _)| {
@@ -91,9 +89,7 @@ impl<T: Config> ClientReader for Context<T> {
 		client_id: &ClientId,
 		height: Height,
 	) -> Result<Option<AnyConsensusState>, Ics02Error> {
-		log::trace!(
-			"in client : [next_consensus_state]"
-		);
+		log::trace!("in client : [next_consensus_state]");
 
 		let mut values = <ConsensusStates<T>>::get(client_id.as_bytes());
 		values.sort_by(|(height_left, _), (height_right, _)| {
@@ -127,9 +123,7 @@ impl<T: Config> ClientReader for Context<T> {
 		client_id: &ClientId,
 		height: Height,
 	) -> Result<Option<AnyConsensusState>, Ics02Error> {
-		log::trace!(
-			"in client : [next_consensus_state]"
-		);
+		log::trace!("in client : [next_consensus_state]");
 
 		let mut values = <ConsensusStates<T>>::get(client_id.as_bytes());
 		values.sort_by(|(height_left, _), (height_right, _)| {
@@ -187,9 +181,7 @@ impl<T: Config> ClientReader for Context<T> {
 	}
 
 	fn client_counter(&self) -> Result<u64, Ics02Error> {
-		log::trace!(
-			"in client : [client_counter]"
-		);
+		log::trace!("in client : [client_counter]");
 
 		Ok(<ClientCounter<T>>::get())
 	}
