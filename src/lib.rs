@@ -8,6 +8,7 @@
 #![allow(unused_assignments)]
 #![allow(unused_imports)]
 #![allow(unused_variables)]
+#![allow(clippy::too_many_arguments)]
 
 //! # Overview
 //!
@@ -95,7 +96,7 @@ use frame_support::{
 	PalletId,
 };
 
-pub(crate) const LOG_TARGET: &'static str = "runtime::pallet-ibc";
+pub(crate) const LOG_TARGET: &str = "runtime::pallet-ibc";
 
 /// A struct corresponds to `Any` in crate "prost-types", used in ibc-rs.
 #[derive(Clone, PartialEq, Eq, Encode, Decode, RuntimeDebug, TypeInfo)]
@@ -565,16 +566,13 @@ pub mod pallet {
 			let _sender = ensure_signed(origin)?;
 			let mut ctx = routing::Context::<T>::new();
 
-			let messages: Vec<ibc_proto::google::protobuf::Any> = messages
-				.into_iter()
-				.map(|message| ibc_proto::google::protobuf::Any {
-					type_url: String::from_utf8(message.type_url.clone()).unwrap(),
-					value: message.value.clone(),
-				})
-				.collect();
+			let messages = messages.into_iter().map(|message| ibc_proto::google::protobuf::Any {
+				type_url: String::from_utf8(message.type_url.clone()).unwrap(),
+				value: message.value,
+			});
 
 			let mut results: Vec<IbcEvent> = vec![];
-			for (index, message) in messages.clone().into_iter().enumerate() {
+			for (index, message) in messages.into_iter().enumerate() {
 				let (mut result, _) =
 					ibc::core::ics26_routing::handler::deliver(&mut ctx, message.clone())
 						.map_err(|_| Error::<T>::Ics26Error)?;
@@ -589,17 +587,6 @@ pub mod pallet {
 
 		/// Update the MMR root stored in client_state
 		/// Example of invoking this function via subxt
-		///
-		/// ```ignore
-		///     let api = client.to_runtime_api::<ibc_node::RuntimeApi<ibc_node::DefaultConfig>>();
-		///
-		///     let result = api
-		///         .tx()
-		///         .ibc()
-		///         .update_client_state(encode_client_id, encode_mmr_root)
-		///         .sign_and_submit(&signer)
-		///         .await?;
-		/// ```
 		#[pallet::weight(0)]
 		pub fn update_client_state(
 			origin: OriginFor<T>,
@@ -643,7 +630,7 @@ pub mod pallet {
 				.unwrap(),
 			);
 
-			let sender = Address::from_str(&format!("{:?}", sender.clone())).unwrap();
+			let sender = Address::from_str(&format!("{:?}", sender)).unwrap();
 
 			let receiver = Address::from_str(
 				&String::from_utf8(receiver).map_err(|_| Error::<T>::InvalidFromUtf8)?,
@@ -668,9 +655,8 @@ pub mod pallet {
 
 			// send to router
 			let mut ctx = routing::Context::<T>::new();
-			let (result, _) =
-				ibc::core::ics26_routing::handler::deliver(&mut ctx, msg.clone().to_any())
-					.map_err(|_| Error::<T>::Ics26Error)?;
+			let (result, _) = ibc::core::ics26_routing::handler::deliver(&mut ctx, msg.to_any())
+				.map_err(|_| Error::<T>::Ics26Error)?;
 
 			// handle the result
 			log::info!("result: {:?}", result);
@@ -995,13 +981,12 @@ fn from_ibc_event_to_inner_event<T: Config>(value: ibc::events::IbcEvent) -> Eve
 			)
 		},
 		ibc::events::IbcEvent::OpenInitChannel(value) => {
-			let height = value.height.clone();
+			let height = value.height;
 			let port_id = value.port_id.clone();
-			let channel_id: Option<ChannelId> = value.channel_id.clone().map(|val| val.into());
+			let channel_id: Option<ChannelId> = value.channel_id.map(|val| val.into());
 			let connection_id = value.connection_id.clone();
 			let counterparty_port_id = value.counterparty_port_id.clone();
-			let counterparty_channel_id: Option<ChannelId> =
-				value.channel_id.clone().map(|val| val.into());
+			let counterparty_channel_id: Option<ChannelId> = value.channel_id.map(|val| val.into());
 			Event::OpenInitChannel(
 				height.into(),
 				port_id.into(),
@@ -1012,13 +997,12 @@ fn from_ibc_event_to_inner_event<T: Config>(value: ibc::events::IbcEvent) -> Eve
 			)
 		},
 		ibc::events::IbcEvent::OpenTryChannel(value) => {
-			let height = value.height.clone();
+			let height = value.height;
 			let port_id = value.port_id.clone();
-			let channel_id: Option<ChannelId> = value.channel_id.clone().map(|val| val.into());
+			let channel_id: Option<ChannelId> = value.channel_id.map(|val| val.into());
 			let connection_id = value.connection_id.clone();
 			let counterparty_port_id = value.counterparty_port_id.clone();
-			let counterparty_channel_id: Option<ChannelId> =
-				value.channel_id.clone().map(|val| val.into());
+			let counterparty_channel_id: Option<ChannelId> = value.channel_id.map(|val| val.into());
 			Event::OpenTryChannel(
 				height.into(),
 				port_id.into(),
@@ -1029,13 +1013,12 @@ fn from_ibc_event_to_inner_event<T: Config>(value: ibc::events::IbcEvent) -> Eve
 			)
 		},
 		ibc::events::IbcEvent::OpenAckChannel(value) => {
-			let height = value.height.clone();
+			let height = value.height;
 			let port_id = value.port_id.clone();
-			let channel_id: Option<ChannelId> = value.channel_id.clone().map(|val| val.into());
+			let channel_id: Option<ChannelId> = value.channel_id.map(|val| val.into());
 			let connection_id = value.connection_id.clone();
 			let counterparty_port_id = value.counterparty_port_id.clone();
-			let counterparty_channel_id: Option<ChannelId> =
-				value.channel_id.clone().map(|val| val.into());
+			let counterparty_channel_id: Option<ChannelId> = value.channel_id.map(|val| val.into());
 			Event::OpenAckChannel(
 				height.into(),
 				port_id.into(),
@@ -1046,9 +1029,9 @@ fn from_ibc_event_to_inner_event<T: Config>(value: ibc::events::IbcEvent) -> Eve
 			)
 		},
 		ibc::events::IbcEvent::OpenConfirmChannel(value) => {
-			let height = value.height.clone();
+			let height = value.height;
 			let port_id = value.port_id.clone();
-			let channel_id: Option<ChannelId> = value.channel_id.clone().map(|val| val.into());
+			let channel_id: Option<ChannelId> = value.channel_id.map(|val| val.into());
 			let connection_id = value.connection_id.clone();
 			let counterparty_port_id = value.counterparty_port_id;
 			let counterparty_channel_id: Option<ChannelId> = value.channel_id.map(|val| val.into());
@@ -1062,9 +1045,9 @@ fn from_ibc_event_to_inner_event<T: Config>(value: ibc::events::IbcEvent) -> Eve
 			)
 		},
 		ibc::events::IbcEvent::CloseInitChannel(value) => {
-			let height = value.height.clone();
+			let height = value.height;
 			let port_id = value.port_id.clone();
-			let channel_id: Option<ChannelId> = Some(value.channel_id.clone().into());
+			let channel_id: Option<ChannelId> = Some(value.channel_id.into());
 			let connection_id = value.connection_id.clone();
 			let counterparty_port_id = value.counterparty_port_id;
 			let counterparty_channel_id: Option<ChannelId> =
@@ -1079,9 +1062,9 @@ fn from_ibc_event_to_inner_event<T: Config>(value: ibc::events::IbcEvent) -> Eve
 			)
 		},
 		ibc::events::IbcEvent::CloseConfirmChannel(value) => {
-			let height = value.height.clone();
+			let height = value.height;
 			let port_id = value.port_id.clone();
-			let channel_id: Option<ChannelId> = value.channel_id.clone().map(|val| val.into());
+			let channel_id: Option<ChannelId> = value.channel_id.map(|val| val.into());
 			let connection_id = value.connection_id.clone();
 			let counterparty_port_id = value.counterparty_port_id.clone();
 			let counterparty_channel_id: Option<ChannelId> = value.channel_id.map(|val| val.into());

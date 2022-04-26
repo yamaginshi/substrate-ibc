@@ -55,7 +55,7 @@ impl<T: Config> PortReader for Context<T> {
 	) -> Result<(ModuleId, PortCapability), Ics05Error> {
 		log::trace!("in port: [lookup_module_by_port]");
 		// todo
-		let module_id = ModuleId::new(format!("ibcmodule").into()).unwrap();
+		let module_id = ModuleId::new("ibcmodule".to_string().into()).unwrap();
 		Ok((module_id, Capability::new().into()))
 	}
 }
