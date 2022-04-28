@@ -63,7 +63,6 @@ impl system::Config for Test {
 // the index of TemplateModule is 8 in the current runtime.
 // In the future, we should find a more dynamic way to create this mapping.
 pub struct ModuleCallbacksImpl;
-impl pallet_ibc::ModuleCallbacks for ModuleCallbacksImpl {}
 
 pub struct MockUnixTime;
 
@@ -76,7 +75,6 @@ impl frame_support::traits::UnixTime for MockUnixTime {
 
 impl super::pallet::Config for Test {
 	type Event = Event;
-	type ModuleCallbacks = ModuleCallbacksImpl;
 	type TimeProvider = MockUnixTime;
 }
 
