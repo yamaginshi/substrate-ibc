@@ -1,5 +1,5 @@
 use super::*;
-use crate::{mock::*, routing::Context};
+use crate::{ibc_core::routing::Context, mock::*};
 use core::str::FromStr;
 use ibc::{
 	applications::ics20_fungible_token_transfer::{

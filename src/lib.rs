@@ -55,17 +55,30 @@ use ibc::{
 };
 
 use ibc::{
+	applications::ics20_fungible_token_transfer::{
+		context::Ics20Context, Address, BaseCoin, IbcCoin,
+	},
 	clients::ics10_grandpa::{
 		client_state::ClientState,
 		help,
 		help::{BlockHeader, Commitment},
 	},
 	core::{
-		ics02_client::client_state::AnyClientState, ics24_host::identifier::ChainId as ICS24ChainId,
+		ics02_client::client_state::AnyClientState,
+		ics04_channel::{
+			channel::{Counterparty, Order},
+			events::WriteAcknowledgement,
+			Version,
+		},
+		ics05_port::capabilities::Capability,
+		ics24_host::identifier::{
+			ChainId as ICS24ChainId, ChannelId as IbcChannelId, PortId as IbcPortId,
+		},
+		ics26_routing::{error::Error as Ics26Error, msgs::Ics26Envelope},
 	},
+	events::IbcEvent,
+	signer::Signer,
 };
-
-use ibc::core::ics26_routing::msgs::Ics26Envelope;
 
 use sp_runtime::DispatchError;
 
@@ -75,15 +88,14 @@ use sp_runtime::{traits::AccountIdConversion, RuntimeDebug, TypeId};
 use sp_std::prelude::*;
 use tendermint_proto::Protobuf;
 
-mod channel;
-mod client;
-mod connection;
 pub mod event;
 // mod ics20_handler;
 // mod ics20_ibc_module_impl;
-pub mod ics20;
-mod port;
-mod routing;
+pub mod context;
+pub mod ibc_app;
+pub mod ibc_core;
+
+use context::Context;
 
 use event::primitive::{
 	ChannelId, ClientId, ClientState as EventClientState, ClientType, ConnectionId, Height, Packet,
@@ -130,23 +142,6 @@ pub mod pallet {
 	};
 	use frame_support::{dispatch::DispatchResult, pallet_prelude::*, traits::UnixTime};
 	use frame_system::pallet_prelude::*;
-	use ibc::{
-		applications::ics20_fungible_token_transfer::{
-			context::Ics20Context, Address, BaseCoin, IbcCoin,
-		},
-		core::{
-			ics04_channel::{
-				channel::{Counterparty, Order},
-				events::WriteAcknowledgement,
-				Version,
-			},
-			ics05_port::capabilities::Capability,
-			ics24_host::identifier::{ChannelId as IbcChannelId, PortId as IbcPortId},
-			ics26_routing::error::Error as Ics26Error,
-		},
-		events::IbcEvent,
-		signer::Signer,
-	};
 
 	/// Configure the pallet by specifying the parameters and types on which it depends.
 	#[pallet::config]
@@ -564,7 +559,7 @@ pub mod pallet {
 			_tmp: u8,
 		) -> DispatchResultWithPostInfo {
 			let _sender = ensure_signed(origin)?;
-			let mut ctx = routing::Context::<T>::new();
+			let mut ctx = Context::<T>::new();
 
 			let messages = messages.into_iter().map(|message| ibc_proto::google::protobuf::Any {
 				type_url: String::from_utf8(message.type_url.clone()).unwrap(),
@@ -598,14 +593,14 @@ pub mod pallet {
 			Self::update_mmr_root(client_id, mmr_root)
 		}
 
-		/// Transfer interface for user test by explore
+		/// Transfer Ics20 token base token
 		#[pallet::weight(0)]
 		pub fn transfer(
 			origin: OriginFor<T>,
 			source_port: Vec<u8>,
 			source_channel: Vec<u8>,
 			token: Vec<u8>,
-			amount: u32,
+			amount: u128,
 			receiver: Vec<u8>,
 			timeout_height: u64,
 			timeout_timestamp: u64,
@@ -632,9 +627,8 @@ pub mod pallet {
 
 			let sender = Address::from_str(&format!("{:?}", sender)).unwrap();
 
-			let receiver = Signer::new(
-				&String::from_utf8(receiver).map_err(|_| Error::<T>::InvalidFromUtf8)?
-			);
+			let receiver =
+				Signer::new(&String::from_utf8(receiver).map_err(|_| Error::<T>::InvalidFromUtf8)?);
 
 			let timeout_height =
 				height::Height { revision_number: 0, revision_height: timeout_height };
@@ -653,7 +647,7 @@ pub mod pallet {
 			};
 
 			// send to router
-			let mut ctx = routing::Context::<T>::new();
+			let mut ctx = Context::<T>::new();
 			let (result, _) = ibc::core::ics26_routing::handler::deliver(&mut ctx, msg.to_any())
 				.map_err(|_| Error::<T>::Ics26Error)?;
 
