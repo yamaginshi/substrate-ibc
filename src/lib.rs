@@ -632,10 +632,9 @@ pub mod pallet {
 
 			let sender = Address::from_str(&format!("{:?}", sender)).unwrap();
 
-			let receiver = Address::from_str(
-				&String::from_utf8(receiver).map_err(|_| Error::<T>::InvalidFromUtf8)?,
-			)
-			.unwrap();
+			let receiver = Signer::new(
+				&String::from_utf8(receiver).map_err(|_| Error::<T>::InvalidFromUtf8)?
+			);
 
 			let timeout_height =
 				height::Height { revision_number: 0, revision_height: timeout_height };
