@@ -9,7 +9,10 @@ use scale_info::prelude::format;
 use ibc::{
 	clients::ics10_grandpa::{consensus_state::ConsensusState as GPConsensusState, header::Header},
 	core::{
-		ics02_client::{client_consensus::AnyConsensusState, client_state::AnyClientState},
+		ics02_client::{
+			client_consensus::AnyConsensusState, client_state::AnyClientState,
+			context::ClientReader,
+		},
 		ics03_connection::{
 			connection::ConnectionEnd,
 			context::{ConnectionKeeper, ConnectionReader},
@@ -141,20 +144,15 @@ impl<T: Config> ConnectionReader for Context<T> {
 			height
 		);
 
-		let height = height.encode_vec().map_err(ICS03Error::invalid_encode)?;
-		let value = <ConsensusStates<T>>::get(client_id.as_bytes());
+		let any_consensus_state = ClientReader::consensus_state(self, client_id, height)
+			.map_err(ICS03Error::ics02_client)?;
 
-		for item in value.iter() {
-			if item.0 == height {
-				let any_consensus_state =
-					AnyConsensusState::decode_vec(&*item.1).map_err(ICS03Error::invalid_decode)?;
-				return Ok(any_consensus_state)
-			}
-		}
-
-		Ok(AnyConsensusState::Grandpa(
-			ibc::clients::ics10_grandpa::consensus_state::ConsensusState::default(),
-		))
+		trace!(
+			target: LOG_TARGET,
+			"in client: [client_consensus_state] >> any consensus state = {:?}",
+			any_consensus_state
+		);
+		Ok(any_consensus_state)
 	}
 
 	/// Returns the ConsensusState of the host (local) chain at a specific height.

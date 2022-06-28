@@ -3,7 +3,10 @@ use crate::{
 	*,
 };
 use log::trace;
-use scale_info::prelude::string::{String, ToString};
+use scale_info::prelude::{
+	format,
+	string::{String, ToString},
+};
 use sp_std::str::FromStr;
 
 use crate::context::Context;
@@ -48,8 +51,7 @@ impl<T: Config> ClientReader for Context<T> {
 			false => {
 				error!(
 					target: LOG_TARGET,
-					"in client : [client_type] :❎ Can't ClientType by ClientId({})",
-					client_id
+					"in client : [client_type] :❎ Can't ClientType by ClientId({})", client_id
 				);
 				Err(ICS02Error::client_not_found(client_id.clone()))
 			},
@@ -76,8 +78,7 @@ impl<T: Config> ClientReader for Context<T> {
 			false => {
 				error!(
 					target: LOG_TARGET,
-					"in client : [client_state] ❎ Can't ClientState by ClientId({})",
-					client_id
+					"in client : [client_state] ❎ Can't ClientState by ClientId({})", client_id
 				);
 				Err(ICS02Error::client_not_found(client_id.clone()))
 			},
@@ -99,30 +100,19 @@ impl<T: Config> ClientReader for Context<T> {
 			height
 		);
 
-		let mut values = <ConsensusStates<T>>::get(client_id.as_bytes());
-		values.sort_by(|(height_left, _), (height_right, _)| {
-			let height_left = Height::decode(&mut &height_left[..]).unwrap_or_default();
-			let height_right = Height::decode(&mut &height_right[..]).unwrap_or_default();
-			height_left.cmp(&height_right)
-		});
+		let encode_client_id = client_id.as_bytes();
+		let encode_height = height.encode_vec().map_err(ICS02Error::invalid_decode)?;
+		let encode_consensus_state = <ConsensusStates<T>>::get(encode_client_id, encode_height);
 
-		for item in values.iter() {
-			let item_height =
-				Height::decode(&mut &item.0.clone()[..]).map_err(ICS02Error::invalid_decode)?;
+		let any_consensus_state = AnyConsensusState::decode_vec(&*encode_consensus_state)
+			.map_err(|_| ICS02Error::consensus_state_not_found(client_id.clone(), height))?;
 
-			if item_height == height {
-				let any_consensus_state =
-					AnyConsensusState::decode_vec(&*item.1).map_err(ICS02Error::invalid_decode)?;
-				trace!(
-					target: LOG_TARGET,
-					"in client : [consensus_state] >> any consensus state = {:?}",
-					any_consensus_state
-				);
-				return Ok(any_consensus_state)
-			}
-		}
-
-		Err(ICS02Error::consensus_state_not_found(client_id.clone(), height))
+		trace!(
+			target: LOG_TARGET,
+			"in client: [consensus_state] >> any consensus state = {:?}",
+			any_consensus_state
+		);
+		Ok(any_consensus_state)
 	}
 
 	/// Search for the lowest consensus state higher than `height`.
@@ -138,32 +128,27 @@ impl<T: Config> ClientReader for Context<T> {
 			height
 		);
 
-		let mut values = <ConsensusStates<T>>::get(client_id.as_bytes());
-		values.sort_by(|(height_left, _), (height_right, _)| {
-			let height_left = Height::decode(&mut &height_left[..]).unwrap_or_default();
-			let height_right = Height::decode(&mut &height_right[..]).unwrap_or_default();
-			height_left.cmp(&height_right)
-		});
+		let encode_client_id = client_id.as_bytes();
+		let mut cs_with_height = <ConsensusStates<T>>::iter_key_prefix(encode_client_id.clone())
+			.map(|height| {
+				let cs_state = <ConsensusStates<T>>::get(encode_client_id, height.clone());
+				let height = Height::decode_vec(&height).map_err(ICS02Error::invalid_decode)?;
+				let any_cs =
+					AnyConsensusState::decode_vec(&cs_state).map_err(ICS02Error::invalid_decode)?;
 
-		for item in values.iter() {
-			let item_height =
-				Height::decode(&mut &item.0.clone()[..]).map_err(ICS02Error::invalid_decode)?;
+				Ok((height, any_cs))
+			})
+			.collect::<Result<Vec<_>, ICS02Error>>()?;
 
-			if item_height < height {
-				let any_consensus_state =
-					AnyConsensusState::decode_vec(&*item.1).map_err(ICS02Error::invalid_decode)?;
-				trace!(
-					target: LOG_TARGET,
-					"in client : [consensus_state] >> any consensus state = {:?}",
-					any_consensus_state
-				);
-				return Ok(Some(any_consensus_state))
+		cs_with_height.sort_by(|a, b| a.0.cmp(&b.0));
+
+		for cs in cs_with_height.into_iter() {
+			if cs.0 > height {
+				return Ok(Some(cs.1))
 			}
 		}
 
-		Ok(Some(AnyConsensusState::Grandpa(
-			ibc::clients::ics10_grandpa::consensus_state::ConsensusState::default(),
-		)))
+		Ok(None)
 	}
 
 	/// Search for the highest consensus state lower than `height`.
@@ -179,32 +164,27 @@ impl<T: Config> ClientReader for Context<T> {
 			height
 		);
 
-		let mut values = <ConsensusStates<T>>::get(client_id.as_bytes());
-		values.sort_by(|(height_left, _), (height_right, _)| {
-			let height_left = Height::decode(&mut &height_left[..]).unwrap_or_default();
-			let height_right = Height::decode(&mut &height_right[..]).unwrap_or_default();
-			height_left.cmp(&height_right)
-		});
+		let encode_client_id = client_id.as_bytes();
+		let mut cs_with_height = <ConsensusStates<T>>::iter_key_prefix(encode_client_id.clone())
+			.map(|height| {
+				let cs_state = <ConsensusStates<T>>::get(encode_client_id, height.clone());
+				let height = Height::decode_vec(&height).map_err(ICS02Error::invalid_decode)?;
+				let any_cs =
+					AnyConsensusState::decode_vec(&cs_state).map_err(ICS02Error::invalid_decode)?;
 
-		for item in values.iter() {
-			let item_height =
-				Height::decode(&mut &item.0.clone()[..]).map_err(ICS02Error::invalid_decode)?;
+				Ok((height, any_cs))
+			})
+			.collect::<Result<Vec<_>, ICS02Error>>()?;
 
-			if item_height > height {
-				let any_consensus_state =
-					AnyConsensusState::decode_vec(&*item.1).map_err(ICS02Error::invalid_decode)?;
-				trace!(
-					target: LOG_TARGET,
-					"in client : [consensus_state] >> any consensus state = {:?}",
-					any_consensus_state
-				);
-				return Ok(Some(any_consensus_state))
+		cs_with_height.sort_by(|a, b| a.0.cmp(&b.0));
+
+		for cs in cs_with_height.into_iter() {
+			if cs.0 < height {
+				return Ok(Some(cs.1))
 			}
 		}
 
-		Ok(Some(AnyConsensusState::Grandpa(
-			ibc::clients::ics10_grandpa::consensus_state::ConsensusState::default(),
-		)))
+		Ok(None)
 	}
 
 	/// Returns the current height of the local chain.
@@ -238,12 +218,23 @@ impl<T: Config> ClientReader for Context<T> {
 	}
 
 	/// Returns the `ConsensusState` of the host (local) chain at specific height.
-	fn host_consensus_state(&self, _height: Height) -> Result<AnyConsensusState, ICS02Error> {
-		trace!(target: LOG_TARGET, "in client : [consensus_state] >> height = {:?}", _height);
+	fn host_consensus_state(&self, height: Height) -> Result<AnyConsensusState, ICS02Error> {
+		trace!(target: LOG_TARGET, "in client : [consensus_state] >> height = {:?}", height);
 
-		Ok(AnyConsensusState::Grandpa(
-			ibc::clients::ics10_grandpa::consensus_state::ConsensusState::default(),
-		))
+		let bounded_map = <HostConsensusState<T>>::get();
+		let local_consensus_state = bounded_map.get(&height.revision_height).expect(&format!(
+			"[host_consensus_state]: consensus state not found for host at height {}",
+			height
+		));
+		let timestamp = Timestamp::from_nanoseconds(local_consensus_state.timestamp)
+			.expect("[host_consensus_state]: error decoding timestamp")
+			.into_tm_time()
+			.expect("[host_consensus_state]: Could not convert timestamp into tendermint time");
+		let consensus_state = ibc::clients::ics10_grandpa::consensus_state::ConsensusState {
+			timestamp,
+			root: local_consensus_state.commitment_root.clone().into(),
+		};
+		Ok(AnyConsensusState::Grandpa(consensus_state))
 	}
 
 	/// Returns the pending `ConsensusState` of the host (local) chain.
@@ -330,19 +321,7 @@ impl<T: Config> ClientKeeper for Context<T> {
 		let encode_consensus_state =
 			consensus_state.encode_vec().map_err(ICS02Error::invalid_encode)?;
 
-		match <ConsensusStates<T>>::contains_key(encode_client_type) {
-			true => {
-				// todo
-				// consensus_state is stored after mmr root updated
-			},
-			false => {
-				// if consensus state is empty insert a new item.
-				<ConsensusStates<T>>::insert(
-					encode_client_type,
-					vec![(encode_height, encode_consensus_state)],
-				);
-			},
-		}
+		<ConsensusStates<T>>::insert(encode_client_type, encode_height, encode_consensus_state);
 
 		Ok(())
 	}

@@ -196,7 +196,6 @@ impl<T: Config> ChannelReader for Context<T> {
 		}
 	}
 
-	/// TODO
 	/// Returns the AnyConsensusState for the given
 	/// identifier `client_id` and at the specified `height`.
 	fn client_consensus_state(
@@ -211,30 +210,15 @@ impl<T: Config> ChannelReader for Context<T> {
 			height
 		);
 
-		let encode_height = height.encode_vec().map_err(|_| ICS04Error::invalid_encode())?;
-		let encode_any_consensus_state = <ConsensusStates<T>>::get(client_id.as_bytes());
+		let any_consensus_state = ClientReader::consensus_state(self, client_id, height)
+			.map_err(ICS04Error::ics02_client)?;
 
-		for item in encode_any_consensus_state.iter() {
-			if item.0 == encode_height {
-				let any_consensus_state =
-					AnyConsensusState::decode_vec(&*item.1).map_err(ICS04Error::invalid_decode)?;
-				trace!(
-					target: LOG_TARGET,
-					"in channel: [client_consensus_state] >> any consensus state = {:?}",
-					any_consensus_state
-				);
-				return Ok(any_consensus_state)
-			}
-		}
-		error!(
+		trace!(
 			target: LOG_TARGET,
-			"in channel : [client_consensus_state] >> read about client_id consensus_state error"
+			"in client: [client_consensus_state] >> any consensus state = {:?}",
+			any_consensus_state
 		);
-
-		// Err(ICS04Error::frozen_client(client_id.clone()))
-		Ok(AnyConsensusState::Grandpa(
-			ibc::clients::ics10_grandpa::consensus_state::ConsensusState::default(),
-		))
+		Ok(any_consensus_state)
 	}
 
 	/// Return `next send sequence ` by given identifier `port_id` and `channel_id`.

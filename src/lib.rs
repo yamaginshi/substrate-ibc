@@ -19,7 +19,7 @@ use crate::{
 	},
 	utils::{AssetIdAndNameProvider, LOG_TARGET},
 };
-use beefy_light_client::commitment::{self, known_payload_ids::MMR_ROOT_ID};
+use beefy_light_client::commitment::{self, /*known_payload_ids::MMR_ROOT_ID*/};
 use codec::{Codec, Decode, Encode};
 use frame_support::{
 	dispatch::DispatchResult,
@@ -92,7 +92,7 @@ impl Default for IbcConsensusState {
 	// Using a default value of 1 for timestamp because using 0 will generate an
 	// error when converting to an ibc::Timestamp in tests and benchmarks
 	fn default() -> Self {
-		Self { timestamp: 1, commitment_root: vec![]}
+		Self { timestamp: 1, commitment_root: vec![] }
 	}
 }
 
@@ -112,8 +112,8 @@ impl From<ibc_proto::google::protobuf::Any> for Any {
 pub use pallet::*;
 #[frame_support::pallet]
 pub mod pallet {
-	use frame_support::storage::bounded_btree_map::BoundedBTreeMap;
 	use super::*;
+	use frame_support::storage::bounded_btree_map::BoundedBTreeMap;
 
 	/// Configure the pallet by specifying the parameters and types on which it depends.
 	#[pallet::config]
@@ -199,8 +199,15 @@ pub mod pallet {
 
 	#[pallet::storage]
 	/// (ClientID, Height) => ConsensusState
-	pub type ConsensusStates<T: Config> =
-		StorageDoubleMap<_, Blake2_128Concat, Vec<u8>, Blake2_128Concat, Vec<u8>,  Vec<u8>, ValueQuery>;
+	pub type ConsensusStates<T: Config> = StorageDoubleMap<
+		_,
+		Blake2_128Concat,
+		Vec<u8>,
+		Blake2_128Concat,
+		Vec<u8>,
+		Vec<u8>,
+		ValueQuery,
+	>;
 
 	#[pallet::storage]
 	/// ConnectionID => ConnectionEnd
@@ -713,15 +720,16 @@ pub mod pallet {
 
 					trace!(target: LOG_TARGET, "the updated client state is : {:?}", client_state);
 
-					let mut consensus_state =
-						GPConsensusState::new(client_state.block_header.clone());
+					let consensus_state =
+						GPConsensusState::from_solchain_header(client_state.block_header.clone())
+							.unwrap();
 
-					consensus_state.digest = client_state
-						.latest_commitment
-						.payload
-						.get_raw(&MMR_ROOT_ID)
-						.cloned()
-						.unwrap_or_default();
+					// consensus_state.digest = client_state
+					// 	.latest_commitment
+					// 	.payload
+					// 	.get_raw(&MMR_ROOT_ID)
+					// 	.cloned()
+					// 	.unwrap_or_default();
 					let any_consensus_state = AnyConsensusState::Grandpa(consensus_state);
 
 					let height = ibc::Height::new(0, client_state.block_number as u64);
@@ -736,26 +744,10 @@ pub mod pallet {
 					);
 
 					let height = height.encode_vec().map_err(|_| Error::<T>::InvalidEncode)?;
-					let data =
+					let encode_any_consensus_state =
 						any_consensus_state.encode_vec().map_err(|_| Error::<T>::InvalidEncode)?;
 
-					match <ConsensusStates<T>>::contains_key(client_id.clone()) {
-						true => {
-							// if consensus_state is no empty use push insert an exist
-							// ConsensusStates
-							let _ = <ConsensusStates<T>>::try_mutate(
-								client_id,
-								|val| -> Result<(), &'static str> {
-									val.push((height, data));
-									Ok(())
-								},
-							);
-						},
-						false => {
-							// if consensus state is empty insert a new item.
-							<ConsensusStates<T>>::insert(client_id, vec![(height, data)]);
-						},
-					}
+					<ConsensusStates<T>>::insert(client_id, height, encode_any_consensus_state);
 
 					// emit update state success event
 					let event_height = Height::new(0, client_state.block_number as u64);
@@ -766,7 +758,10 @@ pub mod pallet {
 					});
 				},
 				Err(e) => {
-					error!(target: LOG_TARGET, "❌ update the beefy light client failure! : {:?}", e);
+					error!(
+						target: LOG_TARGET,
+						"❌ update the beefy light client failure! : {:?}", e
+					);
 
 					return Err(Error::<T>::UpdateBeefyLightClientFailure.into())
 				},
