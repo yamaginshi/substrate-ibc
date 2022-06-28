@@ -19,7 +19,7 @@ use crate::{
 	},
 	utils::{AssetIdAndNameProvider, LOG_TARGET},
 };
-use beefy_light_client::commitment::{self, /*known_payload_ids::MMR_ROOT_ID*/};
+use beefy_light_client::commitment::{self /* known_payload_ids::MMR_ROOT_ID */};
 use codec::{Codec, Decode, Encode};
 use frame_support::{
 	dispatch::DispatchResult,

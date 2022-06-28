@@ -61,6 +61,11 @@ impl<T: Config> ClientReader for Context<T> {
 	/// Read `AnyClientState` by `ClientId`.
 	fn client_state(&self, client_id: &ClientId) -> Result<AnyClientState, ICS02Error> {
 		trace!(target: LOG_TARGET, "in client : [client_state] >> client_id = {:?}", client_id);
+		trace!(
+			target: LOG_TARGET,
+			"in client : [client_state] >> client_type = {:?}",
+			self.client_type(client_id)
+		);
 
 		match <ClientStates<T>>::contains_key(client_id.as_bytes()) {
 			true => {
@@ -99,6 +104,11 @@ impl<T: Config> ClientReader for Context<T> {
 			client_id,
 			height
 		);
+		trace!(
+			target: LOG_TARGET,
+			"in client : [consensus_state] >> client_type = {:?}",
+			self.client_type(client_id)
+		);
 
 		let encode_client_id = client_id.as_bytes();
 		let encode_height = height.encode_vec().map_err(ICS02Error::invalid_decode)?;
@@ -126,6 +136,11 @@ impl<T: Config> ClientReader for Context<T> {
 			"in client : [next_consensus_state] >> client_id = {:?}, height = {:?}",
 			client_id,
 			height
+		);
+		trace!(
+			target: LOG_TARGET,
+			"in client : [next_consensus_state] >> client_type = {:?}",
+			self.client_type(client_id)
 		);
 
 		let encode_client_id = client_id.as_bytes();
@@ -159,9 +174,14 @@ impl<T: Config> ClientReader for Context<T> {
 	) -> Result<Option<AnyConsensusState>, ICS02Error> {
 		trace!(
 			target: LOG_TARGET,
-			"in client : [next_consensus_state] >> client_id = {:?}, height = {:?}",
+			"in client : [prev_consensus_state] >> client_id = {:?}, height = {:?}",
 			client_id,
 			height
+		);
+		trace!(
+			target: LOG_TARGET,
+			"in client : [prev_consensus_state] >> client_type = {:?}",
+			self.client_type(client_id)
 		);
 
 		let encode_client_id = client_id.as_bytes();
@@ -237,6 +257,7 @@ impl<T: Config> ClientReader for Context<T> {
 		Ok(AnyConsensusState::Grandpa(consensus_state))
 	}
 
+	/// TODO
 	/// Returns the pending `ConsensusState` of the host (local) chain.
 	fn pending_host_consensus_state(&self) -> Result<AnyConsensusState, ICS02Error> {
 		trace!(target: LOG_TARGET, "in client: [pending_host_consensus_state]");

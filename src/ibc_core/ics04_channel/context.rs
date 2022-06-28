@@ -7,7 +7,7 @@ use log::{error, trace};
 use scale_info::prelude::string::{String, ToString};
 use sp_std::{collections::btree_map::BTreeMap, str::FromStr, time::Duration};
 
-use crate::{context::Context, utils::host_height};
+use crate::context::Context;
 use ibc::{
 	core::{
 		ics02_client::{
@@ -170,30 +170,16 @@ impl<T: Config> ChannelReader for Context<T> {
 	fn client_state(&self, client_id: &ClientId) -> Result<AnyClientState, ICS04Error> {
 		trace!(target: LOG_TARGET, "in channel : [client_state] >> client_id = {:?}", client_id);
 
-		let encode_client_id = client_id.as_bytes();
-		match <ClientStates<T>>::contains_key(encode_client_id) {
-			true => {
-				let encode_any_client_state = <ClientStates<T>>::get(encode_client_id);
+		let any_client_state =
+			ClientReader::client_state(self, client_id).map_err(ICS04Error::ics02_client)?;
 
-				let any_client_state = AnyClientState::decode_vec(&*encode_any_client_state)
-					.map_err(|_| ICS04Error::frozen_client(client_id.clone()))?;
+		trace!(
+			target: LOG_TARGET,
+			"in channel : [client_state] >> Any client state: {:?}",
+			any_client_state
+		);
 
-				trace!(
-					target: LOG_TARGET,
-					"in channel : [client_state] >> Any client state: {:?}",
-					any_client_state
-				);
-				Ok(any_client_state)
-			},
-			false => {
-				error!(
-					target: LOG_TARGET,
-					"in channel: [client_state] ❎: Can't find client_state by ClientId:({:?})",
-					client_id
-				);
-				Err(ICS04Error::any_client_state_not_found(client_id.clone()))
-			},
-		}
+		Ok(any_client_state)
 	}
 
 	/// Returns the AnyConsensusState for the given
@@ -489,31 +475,25 @@ impl<T: Config> ChannelReader for Context<T> {
 	fn host_height(&self) -> Height {
 		trace!(target: LOG_TARGET, "in channel: [host_height]");
 
-		let revision_number = 0; // TODO, in the future fix
-		let revision_height = host_height::<T>();
+		let height = ClientReader::host_height(self);
 
-		trace!(
-			target: LOG_TARGET,
-			"in channel: [host_height] >> host_height = {:?}",
-			revision_height
-		);
-		Height::new(revision_number, revision_height)
+		trace!(target: LOG_TARGET, "in channel: [host_height] >> Host Height = {:?}", height);
+
+		height
 	}
 
 	/// Returns the current timestamp of the local chain.
 	fn host_timestamp(&self) -> Timestamp {
 		trace!(target: LOG_TARGET, "in channel: [host_timestamp]");
 
-		let time = T::TimeProvider::now();
-		let ts = Timestamp::from_nanoseconds(time.as_nanos() as u64)
-			.map_err(|e| panic!("{:?}, caused by {:?} from pallet timestamp_pallet", e, time));
+		let timestamp = ClientReader::host_timestamp(self);
 		trace!(
 			target: LOG_TARGET,
 			"in channel: [host_timestamp] >> host_timestamp = {:?}",
-			ts.unwrap()
+			timestamp
 		);
 
-		ts.unwrap()
+		timestamp
 	}
 
 	/// Returns the `ConsensusState` for the host (local) chain at a specific height.

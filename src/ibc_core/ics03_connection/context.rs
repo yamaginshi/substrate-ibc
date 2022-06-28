@@ -1,13 +1,12 @@
 use crate::{
 	context::Context,
-	utils::{host_height, LOG_TARGET},
+	utils::LOG_TARGET,
 	*,
 };
 use log::trace;
 use scale_info::prelude::format;
 
 use ibc::{
-	clients::ics10_grandpa::{consensus_state::ConsensusState as GPConsensusState, header::Header},
 	core::{
 		ics02_client::{
 			client_consensus::AnyConsensusState, client_state::AnyClientState,
@@ -62,44 +61,31 @@ impl<T: Config> ConnectionReader for Context<T> {
 	fn client_state(&self, client_id: &ClientId) -> Result<AnyClientState, ICS03Error> {
 		trace!(target: LOG_TARGET, "in connection : [client_state]");
 
-		match <ClientStates<T>>::contains_key(client_id.as_bytes()) {
-			true => {
-				let encode_client_state = <ClientStates<T>>::get(client_id.as_bytes());
-				let any_client_state = AnyClientState::decode_vec(&*encode_client_state)
-					.map_err(ICS03Error::invalid_decode)?;
+		let any_client_state =
+			ClientReader::client_state(self, client_id).map_err(ICS03Error::ics02_client)?;
 
-				trace!(
-					target: LOG_TARGET,
-					"in connection : [client_state] >> client_state: {:?}",
-					any_client_state
-				);
-				Ok(any_client_state)
-			},
-			false => {
-				error!(
-					target: LOG_TARGET,
-					"in connection : [client_state] ❎: Can't AnyClientState by ConnectionID({})",
-					client_id
-				);
-				// TODO update return error
-				Err(ICS03Error::frozen_client(client_id.clone()))
-			},
-		}
+		trace!(
+			target: LOG_TARGET,
+			"in connection : [client_state] >> client_state: {:?}",
+			any_client_state
+		);
+
+		Ok(any_client_state)
 	}
 
 	/// Returns the current height of the local chain.
 	fn host_current_height(&self) -> Height {
 		trace!(target: LOG_TARGET, "in connection : [host_current_height]");
 
-		let revision_height = host_height::<T>();
+		let height = ClientReader::host_height(self);
 
 		trace!(
 			target: LOG_TARGET,
-			"in connection : [host_current_height] >> Host revision_height = {:?}",
-			revision_height
+			"in connection : [host_current_height] >> Host current height = {:?}",
+			height
 		);
-		let revision_number = 0; // TODO: in the future
-		Height::new(revision_number, revision_height)
+
+		height
 	}
 
 	/// Returns the oldest height available on the local chain.
@@ -156,14 +142,15 @@ impl<T: Config> ConnectionReader for Context<T> {
 	}
 
 	/// Returns the ConsensusState of the host (local) chain at a specific height.
-	fn host_consensus_state(&self, _height: Height) -> Result<AnyConsensusState, ICS03Error> {
+	fn host_consensus_state(&self, height: Height) -> Result<AnyConsensusState, ICS03Error> {
 		trace!(
 			target: LOG_TARGET,
 			"in connection : [host_consensus_state] >> height = {:?}",
-			_height
+			height
 		);
+
 		let any_consensus_state =
-			AnyConsensusState::Grandpa(GPConsensusState::from(Header::default()));
+			ClientReader::host_consensus_state(self, height).map_err(ICS03Error::ics02_client)?;
 
 		trace!(
 			target: LOG_TARGET,
