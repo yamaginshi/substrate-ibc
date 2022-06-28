@@ -285,7 +285,7 @@ pub mod pallet {
 	>;
 
 	#[pallet::storage]
-	/// key-value asserid with asset name
+	/// key-value AssetId with AssetName
 	pub type AssetIdByName<T: Config> =
 		StorageMap<_, Twox64Concat, Vec<u8>, T::AssetId, ValueQuery>;
 
