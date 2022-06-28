@@ -570,7 +570,7 @@ pub mod pallet {
 						token,
 						sender,
 						receiver,
-						timeout_height,
+						timeout_height: Some(timeout_height),
 						timeout_timestamp,
 					};
 
