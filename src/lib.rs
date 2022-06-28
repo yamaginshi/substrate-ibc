@@ -96,6 +96,7 @@ impl From<ibc_proto::google::protobuf::Any> for Any {
 pub use pallet::*;
 #[frame_support::pallet]
 pub mod pallet {
+	use frame_support::storage::bounded_btree_map::BoundedBTreeMap;
 	use super::*;
 
 	/// Configure the pallet by specifying the parameters and types on which it depends.
@@ -159,17 +160,17 @@ pub mod pallet {
 	pub struct Pallet<T>(_);
 
 	#[pallet::storage]
-	/// client_id => ClientState
+	/// ClientID => ClientState
 	pub type ClientStates<T: Config> =
 		StorageMap<_, Blake2_128Concat, Vec<u8>, Vec<u8>, ValueQuery>;
 
 	#[pallet::storage]
-	/// (client_id, height) => timestamp
+	/// (ClientID, Height) => TimeStamp
 	pub type ClientUpdateTime<T: Config> =
 		StorageDoubleMap<_, Blake2_128Concat, Vec<u8>, Blake2_128Concat, Vec<u8>, u64, ValueQuery>;
 
 	#[pallet::storage]
-	/// (client_id, height) => host_height
+	/// (ClientID, Height) => HostHeight
 	pub type ClientUpdateHeight<T: Config> = StorageDoubleMap<
 		_,
 		Blake2_128Concat,
@@ -181,16 +182,16 @@ pub mod pallet {
 	>;
 
 	#[pallet::storage]
-	/// client_id => Vector<(Height, ConsensusState)>
+	/// (ClientID, Height) => ConsensusState
 	pub type ConsensusStates<T: Config> =
 		StorageMap<_, Blake2_128Concat, Vec<u8>, Vec<(Vec<u8>, Vec<u8>)>, ValueQuery>;
 
 	#[pallet::storage]
-	/// connection_id => ConnectionEnd
+	/// ConnectionID => ConnectionEnd
 	pub type Connections<T: Config> = StorageMap<_, Blake2_128Concat, Vec<u8>, Vec<u8>, ValueQuery>;
 
 	#[pallet::storage]
-	/// (port_identifier, channel_identifier) => ChannelEnd
+	/// (PortID, ChannelID) => ChannelEnd
 	pub type Channels<T: Config> = StorageDoubleMap<
 		_,
 		Blake2_128Concat,
@@ -202,27 +203,27 @@ pub mod pallet {
 	>;
 
 	#[pallet::storage]
-	/// connection_id => Vec<(port_id, channel_id)>
+	/// ConnectionId => Vec<(PortID, ChannelID)>
 	pub type ChannelsConnection<T: Config> =
 		StorageMap<_, Blake2_128Concat, Vec<u8>, Vec<(Vec<u8>, Vec<u8>)>, ValueQuery>;
 
 	#[pallet::storage]
-	/// (port_id, channel_id) => sequence
+	/// (PortID, ChannelID) => Sequence
 	pub type NextSequenceSend<T: Config> =
 		StorageDoubleMap<_, Blake2_128Concat, Vec<u8>, Blake2_128Concat, Vec<u8>, u64, ValueQuery>;
 
 	#[pallet::storage]
-	/// (port_id, channel_id) => sequence
+	/// (PortID, ChannelID) => Sequence
 	pub type NextSequenceRecv<T: Config> =
 		StorageDoubleMap<_, Blake2_128Concat, Vec<u8>, Blake2_128Concat, Vec<u8>, u64, ValueQuery>;
 
 	#[pallet::storage]
-	/// (port_id, channel_id) => sequence
+	/// (PortID, ChannelID) => Sequence
 	pub type NextSequenceAck<T: Config> =
 		StorageDoubleMap<_, Blake2_128Concat, Vec<u8>, Blake2_128Concat, Vec<u8>, u64, ValueQuery>;
 
 	#[pallet::storage]
-	/// (port_id, channel_id, sequence) => hash of acknowledgement
+	/// (PortId, ChannelId, Sequence) => Hash of acknowledgement
 	pub type Acknowledgements<T: Config> = StorageNMap<
 		_,
 		(
@@ -235,7 +236,7 @@ pub mod pallet {
 	>;
 
 	#[pallet::storage]
-	/// client_id => client_type
+	/// ClientId => ClientType
 	pub type Clients<T: Config> = StorageMap<_, Blake2_128Concat, Vec<u8>, Vec<u8>, ValueQuery>;
 
 	#[pallet::storage]
@@ -253,12 +254,12 @@ pub mod pallet {
 	pub type ChannelCounter<T: Config> = StorageValue<_, u64, ValueQuery>;
 
 	#[pallet::storage]
-	/// ClientId => Vec<ConnectionId>
+	/// ClientID => Vec<ConnectionID>
 	pub type ConnectionClient<T: Config> =
 		StorageMap<_, Blake2_128Concat, Vec<u8>, Vec<Vec<u8>>, ValueQuery>;
 
 	#[pallet::storage]
-	/// (port_id, channel_id, sequence) => receipt
+	/// (PortID, ChannelID, Sequence) => Receipt
 	pub type PacketReceipt<T: Config> = StorageNMap<
 		_,
 		(
@@ -271,7 +272,7 @@ pub mod pallet {
 	>;
 
 	#[pallet::storage]
-	/// (port_id, channel_id, sequence) => hash of (timestamp, height, packet)
+	/// (PortID, ChannelID, Sequence) => Hash of (timestamp, height, packet)
 	pub type PacketCommitment<T: Config> = StorageNMap<
 		_,
 		(
@@ -744,7 +745,7 @@ pub mod pallet {
 					});
 				},
 				Err(e) => {
-					error!(target: LOG_TARGET, "update the beefy light client failure! : {:?}", e);
+					error!(target: LOG_TARGET, "❌ update the beefy light client failure! : {:?}", e);
 
 					return Err(Error::<T>::UpdateBeefyLightClientFailure.into())
 				},
