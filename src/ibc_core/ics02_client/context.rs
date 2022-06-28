@@ -46,7 +46,11 @@ impl<T: Config> ClientReader for Context<T> {
 				Ok(client_type)
 			},
 			false => {
-				error!(target: LOG_TARGET, "in client : [client_type] >> read client_type is None");
+				error!(
+					target: LOG_TARGET,
+					"in client : [client_type] :❎ Can't ClientType by ClientId({})",
+					client_id
+				);
 				Err(ICS02Error::client_not_found(client_id.clone()))
 			},
 		}
@@ -72,7 +76,8 @@ impl<T: Config> ClientReader for Context<T> {
 			false => {
 				error!(
 					target: LOG_TARGET,
-					"in client : [client_state] >> read any client state is None"
+					"in client : [client_state] ❎ Can't ClientState by ClientId({})",
+					client_id
 				);
 				Err(ICS02Error::client_not_found(client_id.clone()))
 			},

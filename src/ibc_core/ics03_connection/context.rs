@@ -46,8 +46,10 @@ impl<T: Config> ConnectionReader for Context<T> {
 			false => {
 				error!(
 					target: LOG_TARGET,
-					"in connection : [connection_end] >> read connection end returns None"
+					"in connection : [connection_end] ❎: Can't ConnectionEnd by ConnectionID({})",
+					conn_id
 				);
+				// TODO update return error
 				Err(ICS03Error::connection_mismatch(conn_id.clone()))
 			},
 		}
@@ -73,8 +75,10 @@ impl<T: Config> ConnectionReader for Context<T> {
 			false => {
 				error!(
 					target: LOG_TARGET,
-					"in connection : [client_state] >> read client_state is None"
+					"in connection : [client_state] ❎: Can't AnyClientState by ConnectionID({})",
+					client_id
 				);
+				// TODO update return error
 				Err(ICS03Error::frozen_client(client_id.clone()))
 			},
 		}

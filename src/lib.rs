@@ -80,6 +80,22 @@ mod tests;
 type BalanceOf<T> =
 	<<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
 
+#[derive(Clone, PartialEq, Eq, Encode, Decode, RuntimeDebug, TypeInfo)]
+pub struct IbcConsensusState {
+	/// Timestamp at which this state root was generated in nanoseconds.
+	pub timestamp: u64,
+	/// ibc commitment root
+	pub commitment_root: Vec<u8>,
+}
+
+impl Default for IbcConsensusState {
+	// Using a default value of 1 for timestamp because using 0 will generate an
+	// error when converting to an ibc::Timestamp in tests and benchmarks
+	fn default() -> Self {
+		Self { timestamp: 1, commitment_root: vec![]}
+	}
+}
+
 /// A struct corresponds to `Any` in crate "prost-types", used in ibc-rs.
 #[derive(Clone, PartialEq, Eq, Encode, Decode, RuntimeDebug, TypeInfo)]
 pub struct Any {
@@ -184,7 +200,7 @@ pub mod pallet {
 	#[pallet::storage]
 	/// (ClientID, Height) => ConsensusState
 	pub type ConsensusStates<T: Config> =
-		StorageMap<_, Blake2_128Concat, Vec<u8>, Vec<(Vec<u8>, Vec<u8>)>, ValueQuery>;
+		StorageDoubleMap<_, Blake2_128Concat, Vec<u8>, Blake2_128Concat, Vec<u8>,  Vec<u8>, ValueQuery>;
 
 	#[pallet::storage]
 	/// ConnectionID => ConnectionEnd
@@ -241,16 +257,16 @@ pub mod pallet {
 
 	#[pallet::storage]
 	#[pallet::getter(fn client_counter)]
-	/// client counter
+	/// Client Counter
 	pub type ClientCounter<T: Config> = StorageValue<_, u64, ValueQuery>;
 
 	#[pallet::storage]
 	#[pallet::getter(fn connection_counter)]
-	/// connection counter
+	/// Connection Counter
 	pub type ConnectionCounter<T: Config> = StorageValue<_, u64, ValueQuery>;
 
 	#[pallet::storage]
-	/// channel counter
+	/// Channel Counter
 	pub type ChannelCounter<T: Config> = StorageValue<_, u64, ValueQuery>;
 
 	#[pallet::storage]
@@ -288,6 +304,11 @@ pub mod pallet {
 	/// key-value AssetId with AssetName
 	pub type AssetIdByName<T: Config> =
 		StorageMap<_, Twox64Concat, Vec<u8>, T::AssetId, ValueQuery>;
+
+	#[pallet::storage]
+	/// Height => IbcConsensusState
+	pub type HostConsensusState<T: Config> =
+		StorageValue<_, BoundedBTreeMap<u64, IbcConsensusState, ConstU32<250>>, ValueQuery>;
 
 	#[pallet::genesis_config]
 	pub struct GenesisConfig<T: Config> {
