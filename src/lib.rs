@@ -36,7 +36,10 @@ use ibc::{
 		client_state::ClientState, consensus_state::ConsensusState as GPConsensusState, help,
 	},
 	core::{
-		ics02_client::{client_consensus::AnyConsensusState, client_state::AnyClientState, height},
+		ics02_client::{
+			client_consensus::AnyConsensusState, client_state::AnyClientState, height,
+			msgs::create_client::TYPE_URL as CREATE_CLIENT_TYPE_URL,
+		},
 		ics24_host::identifier,
 		ics26_routing::handler::deliver,
 	},
@@ -71,6 +74,7 @@ pub mod applications;
 mod benchmarking;
 pub mod clients;
 pub mod ibc_core;
+mod impls;
 #[cfg(test)]
 mod mock;
 pub mod relayer;
@@ -114,6 +118,7 @@ pub use pallet::*;
 pub mod pallet {
 	use super::*;
 	use frame_support::storage::bounded_btree_map::BoundedBTreeMap;
+	use ibc::core::ics26_routing::handler::MsgReceipt;
 
 	/// Configure the pallet by specifying the parameters and types on which it depends.
 	#[pallet::config]
@@ -429,6 +434,22 @@ pub mod pallet {
 		InvalidTokenId,
 		/// wrong assert id
 		WrongAssetId,
+		/// invalid message type
+		InvalidMessageType,
+	}
+
+	#[pallet::hooks]
+	impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T>
+	where
+		T: Send + Sync + 'static,
+	{
+		fn on_finalize(_n: BlockNumberFor<T>) {
+			todo!()
+		}
+
+		fn offchain_worker(_n: BlockNumberFor<T>) {
+			todo!()
+		}
 	}
 
 	/// Dispatchable functions allows users to interact with the pallet and invoke state changes.
@@ -592,6 +613,29 @@ pub mod pallet {
 					Ok(())
 				}
 			)
+		}
+
+		#[pallet::weight(0)]
+		pub fn create_client(origin: OriginFor<T>, msg: Any) -> DispatchResult {
+			// now root account can create client
+			let _who = ensure_root(origin)?;
+
+			let mut ctx = Context::<T>::default();
+
+			let type_url = String::from_utf8(msg.type_url.clone()).unwrap();
+
+			if type_url.as_str() != CREATE_CLIENT_TYPE_URL {
+				return Err(Error::<T>::InvalidMessageType.into())
+			}
+			let msg = ibc_proto::google::protobuf::Any { type_url, value: msg.value };
+
+			let MsgReceipt { events, log } =
+				deliver(&mut ctx, msg).map_err(|_| Error::<T>::Ics26Error)?;
+
+			trace!(target: LOG_TARGET, "[create_client]: logs: {:?}", log);
+
+			Self::deposit_event(events.into());
+			Ok(())
 		}
 	}
 
