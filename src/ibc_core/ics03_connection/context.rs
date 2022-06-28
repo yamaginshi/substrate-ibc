@@ -1,8 +1,4 @@
-use crate::{
-	context::Context,
-	utils::LOG_TARGET,
-	*,
-};
+use crate::{context::Context, utils::LOG_TARGET, *};
 use log::trace;
 use scale_info::prelude::format;
 
