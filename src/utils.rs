@@ -43,3 +43,12 @@ pub fn offchain_key<T: Config>(channel_id: Vec<u8>, port_id: Vec<u8>) -> Vec<u8>
 	let pair = (T::INDEXING_PREFIX.to_vec(), channel_id, port_id);
 	pair.encode()
 }
+
+/// Get trie key by applying the commitment prefix to the path and scale encoding the result
+pub fn apply_prefix_and_encode(prefix: &[u8], path : Vec<String>) -> Vec<u8> {
+	let mut key_path = vec![prefix];
+	let path =  path.iter().map(|p| p.as_bytes()).collect::<Vec<_>>();
+	key_path.extend_from_slice(&path);
+	key_path.encode()
+}
+
