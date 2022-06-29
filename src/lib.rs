@@ -288,7 +288,7 @@ pub mod pallet {
 
 	#[pallet::storage]
 	/// (PortID, ChannelID, Sequence) => Receipt
-	pub type PacketReceipt<T: Config> = StorageNMap<
+	pub type PacketReceipts<T: Config> = StorageNMap<
 		_,
 		(
 			NMapKey<Blake2_128Concat, Vec<u8>>,
@@ -301,7 +301,7 @@ pub mod pallet {
 
 	#[pallet::storage]
 	/// (PortID, ChannelID, Sequence) => Hash of (timestamp, height, packet)
-	pub type PacketCommitment<T: Config> = StorageNMap<
+	pub type PacketCommitments<T: Config> = StorageNMap<
 		_,
 		(
 			NMapKey<Blake2_128Concat, Vec<u8>>,

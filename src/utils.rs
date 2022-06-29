@@ -1,6 +1,8 @@
 use crate::Config;
 use codec::Encode;
 use scale_info::prelude::{fmt::Debug, format, vec::Vec};
+use scale_info::prelude::string::String;
+use sp_std::vec;
 
 use ibc::{
 	applications::transfer::{error::Error as Ics20Error, VERSION},

@@ -337,13 +337,13 @@ impl<T: Config> ChannelReader for Context<T> {
 		let encode_channel_id = key.1.to_string().as_bytes().to_vec();
 		let encode_sequence = u64::from(key.2);
 
-		match <PacketCommitment<T>>::contains_key((
+		match <PacketCommitments<T>>::contains_key((
 			&encode_port_id,
 			&encode_channel_id,
 			encode_sequence,
 		)) {
 			true => {
-				let encode_packet_commitment = <PacketCommitment<T>>::get((
+				let encode_packet_commitment = <PacketCommitments<T>>::get((
 					&encode_port_id,
 					&encode_channel_id,
 					encode_sequence,
@@ -384,14 +384,14 @@ impl<T: Config> ChannelReader for Context<T> {
 		let encode_channel_id = key.1.to_string().as_bytes().to_vec();
 		let encode_sequence = u64::from(key.2);
 
-		match <PacketReceipt<T>>::contains_key((
+		match <PacketReceipts<T>>::contains_key((
 			&encode_port_id,
 			&encode_channel_id,
 			encode_sequence,
 		)) {
 			true => {
 				let encode_receipt =
-					<PacketReceipt<T>>::get((&encode_port_id, &encode_channel_id, encode_sequence));
+					<PacketReceipts<T>>::get((&encode_port_id, &encode_channel_id, encode_sequence));
 
 				let string_receipt =
 					String::from_utf8(encode_receipt).map_err(ICS04Error::invalid_from_utf8)?;
@@ -618,7 +618,7 @@ impl<T: Config> ChannelKeeper for Context<T> {
 		let encode_sequence = u64::from(key.2);
 		let encode_packet_commitment = commitment.into_vec();
 
-		<PacketCommitment<T>>::insert(
+		<PacketCommitments<T>>::insert(
 			(encode_port_id.to_vec(), encode_channel_id.to_vec(), encode_sequence),
 			encode_packet_commitment,
 		);
@@ -643,7 +643,7 @@ impl<T: Config> ChannelKeeper for Context<T> {
 		let encode_channel_id = key.1.to_string().as_bytes().to_vec();
 		let encode_sequence = u64::from(key.2);
 
-		<PacketCommitment<T>>::remove((&encode_port_id, &encode_channel_id, encode_sequence));
+		<PacketCommitments<T>>::remove((&encode_port_id, &encode_channel_id, encode_sequence));
 
 		Ok(())
 	}
@@ -700,7 +700,7 @@ impl<T: Config> ChannelKeeper for Context<T> {
 			Receipt::Ok => "Ok".as_bytes(),
 		};
 
-		<PacketReceipt<T>>::insert(
+		<PacketReceipts<T>>::insert(
 			(&encode_port_id, &encode_channel_id, encode_sequence),
 			encode_receipt,
 		);
