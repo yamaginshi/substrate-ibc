@@ -390,8 +390,11 @@ impl<T: Config> ChannelReader for Context<T> {
 			encode_sequence,
 		)) {
 			true => {
-				let encode_receipt =
-					<PacketReceipts<T>>::get((&encode_port_id, &encode_channel_id, encode_sequence));
+				let encode_receipt = <PacketReceipts<T>>::get((
+					&encode_port_id,
+					&encode_channel_id,
+					encode_sequence,
+				));
 
 				let string_receipt =
 					String::from_utf8(encode_receipt).map_err(ICS04Error::invalid_from_utf8)?;

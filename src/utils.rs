@@ -1,7 +1,6 @@
 use crate::Config;
 use codec::Encode;
-use scale_info::prelude::{fmt::Debug, format, vec::Vec};
-use scale_info::prelude::string::String;
+use scale_info::prelude::{fmt::Debug, format, string::String, vec::Vec};
 use sp_std::vec;
 
 use ibc::{
@@ -47,10 +46,9 @@ pub fn offchain_key<T: Config>(channel_id: Vec<u8>, port_id: Vec<u8>) -> Vec<u8>
 }
 
 /// Get trie key by applying the commitment prefix to the path and scale encoding the result
-pub fn apply_prefix_and_encode(prefix: &[u8], path : Vec<String>) -> Vec<u8> {
+pub fn apply_prefix_and_encode(prefix: &[u8], path: Vec<String>) -> Vec<u8> {
 	let mut key_path = vec![prefix];
-	let path =  path.iter().map(|p| p.as_bytes()).collect::<Vec<_>>();
+	let path = path.iter().map(|p| p.as_bytes()).collect::<Vec<_>>();
 	key_path.extend_from_slice(&path);
 	key_path.encode()
 }
-
