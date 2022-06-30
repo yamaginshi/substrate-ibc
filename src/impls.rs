@@ -33,12 +33,14 @@ impl<T: Config> Pallet<T> {
 		Ok(inputs)
 	}
 
-	fn build_ibc_state_root() -> Result<H256, Error<T>> {
-		todo!()
+	pub fn build_ibc_state_root() -> Result<H256, Error<T>> {
+		let inputs = Self::build_trie_inputs()?;
+		Ok(sp_io::trie::blake2_256_root(inputs, sp_core::storage::StateVersion::V0))
 	}
 
-	fn extract_ibc_state_root() -> Result<Vec<u8>, Error<T>> {
-		todo!()
+	pub fn extract_ibc_state_root() -> Result<Vec<u8>, Error<T>> {
+		let root = Self::build_ibc_state_root()?;
+		Ok(root.as_bytes().to_vec())
 	}
 
 	/// insert client type and client state in trie
