@@ -119,6 +119,7 @@ pub mod pallet {
 	use super::*;
 	use frame_support::storage::bounded_btree_map::BoundedBTreeMap;
 	use ibc::core::ics26_routing::handler::MsgReceipt;
+	use crate::clients::host_functions::HostFunctions;
 
 	/// Configure the pallet by specifying the parameters and types on which it depends.
 	#[pallet::config]
@@ -488,7 +489,7 @@ pub mod pallet {
 				let mut results: Vec<RawIbcEvent> = vec![];
 				for (_index, message) in messages.into_iter().enumerate() {
 					let mut result = Vec::new();
-					match deliver(&mut ctx, message.clone()) {
+					match deliver::<_, HostFunctions>(&mut ctx, message.clone()) {
 						Ok(value) => {
 							trace!(
 								target: LOG_TARGET,
@@ -630,7 +631,7 @@ pub mod pallet {
 			let msg = ibc_proto::google::protobuf::Any { type_url, value: msg.value };
 
 			let MsgReceipt { events, log } =
-				deliver(&mut ctx, msg).map_err(|_| Error::<T>::Ics26Error)?;
+				deliver::<_,HostFunctions>(&mut ctx, msg).map_err(|_| Error::<T>::Ics26Error)?;
 
 			trace!(target: LOG_TARGET, "[create_client]: logs: {:?}", log);
 

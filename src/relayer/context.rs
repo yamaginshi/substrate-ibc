@@ -12,6 +12,7 @@ use ibc::{
 };
 use ibc_proto::google::protobuf::Any;
 use scale_info::prelude::{vec, vec::Vec};
+use crate::clients::host_functions::HostFunctions;
 
 impl<T: Config> Ics18Context for Context<T> {
 	fn query_latest_height(&self) -> Height {
@@ -34,7 +35,7 @@ impl<T: Config> Ics18Context for Context<T> {
 		let mut all_events = vec![];
 		for msg in msgs {
 			let MsgReceipt { mut events, .. } =
-				deliver(self, msg).map_err(ICS18Error::transaction_failed)?;
+				deliver::<_, HostFunctions>(self, msg).map_err(ICS18Error::transaction_failed)?;
 			all_events.append(&mut events);
 		}
 		Ok(all_events)
