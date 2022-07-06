@@ -1,4 +1,4 @@
-use crate::{context::Context, utils::host_height, Config};
+use crate::{clients::host_functions::HostFunctions, context::Context, utils::host_height, Config};
 use ibc::{
 	core::{
 		ics02_client::{client_state::AnyClientState, context::ClientReader, header::AnyHeader},
@@ -12,7 +12,6 @@ use ibc::{
 };
 use ibc_proto::google::protobuf::Any;
 use scale_info::prelude::{vec, vec::Vec};
-use crate::clients::host_functions::HostFunctions;
 
 impl<T: Config> Ics18Context for Context<T> {
 	fn query_latest_height(&self) -> Height {

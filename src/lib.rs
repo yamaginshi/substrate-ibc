@@ -117,9 +117,9 @@ pub use pallet::*;
 #[frame_support::pallet]
 pub mod pallet {
 	use super::*;
+	use crate::clients::host_functions::HostFunctions;
 	use frame_support::storage::bounded_btree_map::BoundedBTreeMap;
 	use ibc::core::ics26_routing::handler::MsgReceipt;
-	use crate::clients::host_functions::HostFunctions;
 
 	/// Configure the pallet by specifying the parameters and types on which it depends.
 	#[pallet::config]
@@ -631,7 +631,7 @@ pub mod pallet {
 			let msg = ibc_proto::google::protobuf::Any { type_url, value: msg.value };
 
 			let MsgReceipt { events, log } =
-				deliver::<_,HostFunctions>(&mut ctx, msg).map_err(|_| Error::<T>::Ics26Error)?;
+				deliver::<_, HostFunctions>(&mut ctx, msg).map_err(|_| Error::<T>::Ics26Error)?;
 
 			trace!(target: LOG_TARGET, "[create_client]: logs: {:?}", log);
 
