@@ -217,8 +217,8 @@ impl<T: Config> ClientReader for Context<T> {
 			"in channel: [host_height] >> revision_height = {:?}",
 			revision_height
 		);
-		let revision_number = 0; // todo revision_number is zero.
-		Height::new(revision_number, revision_height)
+		let revision_number = 1; // todo(daivrain) revision_number is zero.
+		Height::new(revision_number, revision_height).unwrap()
 	}
 
 	/// Returns the current timestamp of the local chain.
@@ -242,7 +242,7 @@ impl<T: Config> ClientReader for Context<T> {
 		trace!(target: LOG_TARGET, "in client : [consensus_state] >> height = {:?}", height);
 
 		let bounded_map = <HostConsensusState<T>>::get();
-		let local_consensus_state = bounded_map.get(&height.revision_height).expect(&format!(
+		let local_consensus_state = bounded_map.get(&height.revision_height()).expect(&format!(
 			"[host_consensus_state]: consensus state not found for host at height {}",
 			height
 		));

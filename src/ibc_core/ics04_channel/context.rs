@@ -73,7 +73,7 @@ impl<T: Config> ChannelReader for Context<T> {
 					port_channel_id.0,
 					port_channel_id.1
 				);
-				Err(ICS04Error::channel_not_found(port_channel_id.0.clone(), port_channel_id.1))
+				Err(ICS04Error::channel_not_found(port_channel_id.0.clone(), port_channel_id.1.clone()))
 			},
 		}
 	}

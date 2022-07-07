@@ -27,7 +27,7 @@ pub fn host_height<T: Config>() -> u64 {
 
 pub fn get_channel_escrow_address(
 	port_id: &PortId,
-	channel_id: ChannelId,
+	channel_id: &ChannelId,
 ) -> Result<Signer, Ics20Error> {
 	let contents = format!("{}/{}", port_id, channel_id);
 	let mut data = VERSION.as_bytes().to_vec();

@@ -119,6 +119,7 @@ pub mod pallet {
 	use super::*;
 	use crate::clients::host_functions::HostFunctions;
 	use frame_support::storage::bounded_btree_map::BoundedBTreeMap;
+	use ibc::core::ics04_channel::timeout::TimeoutHeight;
 	use ibc::core::ics26_routing::handler::MsgReceipt;
 
 	/// Configure the pallet by specifying the parameters and types on which it depends.
@@ -579,7 +580,7 @@ pub mod pallet {
 
 
 					let timeout_height =
-						height::Height { revision_number: 0, revision_height: timeout_height };
+						height::Height::new(1, timeout_height).unwrap(); // todo!(davirian) handle revision_number
 					info!(target: LOG_TARGET,"[transfer] : timeout height : {}", timeout_height);
 
 					let timeout_timestamp = timestamp::Timestamp::from_nanoseconds(timeout_timestamp)
@@ -592,7 +593,7 @@ pub mod pallet {
 						token,
 						sender,
 						receiver,
-						timeout_height: Some(timeout_height),
+						timeout_height: TimeoutHeight::At(timeout_height),
 						timeout_timestamp,
 					};
 
@@ -777,7 +778,7 @@ pub mod pallet {
 					// 	.unwrap_or_default();
 					let any_consensus_state = AnyConsensusState::Grandpa(consensus_state);
 
-					let height = ibc::Height::new(0, client_state.block_number as u64);
+					let height = ibc::Height::new(1, client_state.block_number as u64).unwrap(); // (daivinra) todo revision_number
 
 					trace!(
 						target: LOG_TARGET,

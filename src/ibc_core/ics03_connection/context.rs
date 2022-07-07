@@ -93,12 +93,12 @@ impl<T: Config> ConnectionReader for Context<T> {
 		let (block_number, ..) = temp.get(0).cloned().unwrap_or_default();
 		let block_number = format!("{:?}", block_number);
 		let revision_height = block_number.parse().unwrap_or_default();
-		let revision_number = 0; //TODO: may be in the future to fix
+		let revision_number = 1; //TODO(daivinra): may be in the future to fix
 		trace!(
 			"in connection : [host_oldest_height] >> Host oldest height = {:?}",
 			revision_height
 		);
-		Height::new(revision_number, revision_height)
+		Height::new(revision_number, revision_height).unwrap()
 	}
 
 	/// Returns the prefix that local chain uses in the KV store.

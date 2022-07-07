@@ -83,8 +83,8 @@ impl<T: Config> Pallet<T> {
 
 			let client_consensus_state_path = ClientConsensusStatePath {
 				client_id,
-				epoch: height.revision_number,
-				height: height.revision_height,
+				epoch: height.revision_number(),
+				height: height.revision_height(),
 			};
 			let client_consensus_state_path = format!("{}", client_consensus_state_path);
 			let client_consensus_state_key =

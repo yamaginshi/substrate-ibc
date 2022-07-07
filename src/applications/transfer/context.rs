@@ -62,7 +62,7 @@ impl<T: Config> Ics20Reader for Context<T> {
 	fn get_channel_escrow_address(
 		&self,
 		port_id: &PortId,
-		channel_id: IbcChannelId,
+		channel_id: &IbcChannelId,
 	) -> Result<<Self as Ics20Reader>::AccountId, ICS20Error> {
 		get_channel_escrow_address(port_id, channel_id)?
 			.try_into()

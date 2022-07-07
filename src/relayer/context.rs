@@ -15,9 +15,9 @@ use scale_info::prelude::{vec, vec::Vec};
 
 impl<T: Config> Ics18Context for Context<T> {
 	fn query_latest_height(&self) -> Height {
-		let revision_number = 0; // TODO, in the future to fix.
+		let revision_number = 1; // TODO(daivinra), in the future to fix.
 		let revision_height = host_height::<T>();
-		Height::new(revision_number, revision_height)
+		Height::new(revision_number, revision_height).unwrap()
 	}
 
 	fn query_client_full_state(&self, client_id: &ClientId) -> Option<AnyClientState> {

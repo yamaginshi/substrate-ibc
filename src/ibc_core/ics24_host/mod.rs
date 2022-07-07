@@ -64,14 +64,17 @@ pub struct Height {
 }
 
 impl From<IbcHeight> for Height {
-	fn from(IbcHeight { revision_number, revision_height }: IbcHeight) -> Self {
-		Self { revision_number, revision_height }
+	fn from(ibc_height: IbcHeight) -> Self {
+		Self { revision_number: ibc_height.revision_number(), revision_height: ibc_height.revision_height() }
 	}
 }
 
 impl From<Height> for IbcHeight {
 	fn from(height: Height) -> Self {
-		Self { revision_number: height.revision_number, revision_height: height.revision_height }
+		if height.revision_number == 0 {
+			return Self::new(1, height.revision_height).unwrap(); // todo(davirian)
+		}
+		Self::new(height.revision_number, height.revision_height).unwrap()
 	}
 }
 

@@ -132,8 +132,6 @@ pub enum IbcEvent {
 	TimeoutPacket { height: Height, packet: Packet },
 	/// TimoutOnClose packet
 	TimeoutOnClosePacket { height: Height, packet: Packet },
-	/// Empty
-	Empty(Vec<u8>),
 	/// Chain Error
 	ChainError(Vec<u8>),
 	/// App Module
@@ -264,7 +262,7 @@ impl From<RawIbcEvent> for IbcEvent {
 			RawIbcEvent::OpenInitChannel(value) => {
 				let height = value.height;
 				let port_id = value.port_id.clone();
-				let channel_id: Option<ChannelId> = value.channel_id.map(|val| val.into());
+				let channel_id: Option<ChannelId> = value.channel_id.clone().map(|val| val.into());
 				let connection_id = value.connection_id.clone();
 				let counterparty_port_id = value.counterparty_port_id.clone();
 				let counterparty_channel_id: Option<ChannelId> =
@@ -281,7 +279,7 @@ impl From<RawIbcEvent> for IbcEvent {
 			RawIbcEvent::OpenTryChannel(value) => {
 				let height = value.height;
 				let port_id = value.port_id.clone();
-				let channel_id: Option<ChannelId> = value.channel_id.map(|val| val.into());
+				let channel_id: Option<ChannelId> = value.channel_id.clone().map(|val| val.into());
 				let connection_id = value.connection_id.clone();
 				let counterparty_port_id = value.counterparty_port_id.clone();
 				let counterparty_channel_id: Option<ChannelId> =
@@ -298,7 +296,7 @@ impl From<RawIbcEvent> for IbcEvent {
 			RawIbcEvent::OpenAckChannel(value) => {
 				let height = value.height;
 				let port_id = value.port_id.clone();
-				let channel_id: Option<ChannelId> = value.channel_id.map(|val| val.into());
+				let channel_id: Option<ChannelId> = value.channel_id.clone().map(|val| val.into());
 				let connection_id = value.connection_id.clone();
 				let counterparty_port_id = value.counterparty_port_id.clone();
 				let counterparty_channel_id: Option<ChannelId> =
@@ -315,7 +313,7 @@ impl From<RawIbcEvent> for IbcEvent {
 			RawIbcEvent::OpenConfirmChannel(value) => {
 				let height = value.height;
 				let port_id = value.port_id.clone();
-				let channel_id: Option<ChannelId> = value.channel_id.map(|val| val.into());
+				let channel_id: Option<ChannelId> = value.channel_id.clone().map(|val| val.into());
 				let connection_id = value.connection_id.clone();
 				let counterparty_port_id = value.counterparty_port_id;
 				let counterparty_channel_id: Option<ChannelId> =
@@ -349,7 +347,7 @@ impl From<RawIbcEvent> for IbcEvent {
 			RawIbcEvent::CloseConfirmChannel(value) => {
 				let height = value.height;
 				let port_id = value.port_id.clone();
-				let channel_id: Option<ChannelId> = value.channel_id.map(|val| val.into());
+				let channel_id: Option<ChannelId> = value.channel_id.clone().map(|val| val.into());
 				let connection_id = value.connection_id.clone();
 				let counterparty_port_id = value.counterparty_port_id.clone();
 				let counterparty_channel_id: Option<ChannelId> =
@@ -395,7 +393,6 @@ impl From<RawIbcEvent> for IbcEvent {
 				IbcEvent::TimeoutOnClosePacket { height: height.into(), packet: packet.into() }
 			},
 			RawIbcEvent::AppModule(_) => IbcEvent::AppModule,
-			RawIbcEvent::Empty(value) => IbcEvent::Empty(value.as_bytes().to_vec()),
 			RawIbcEvent::ChainError(value) => IbcEvent::ChainError(value.as_bytes().to_vec()),
 		}
 	}
