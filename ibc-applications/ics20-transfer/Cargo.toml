@@ -26,8 +26,8 @@ frame-system = { version = "4.0.0-dev", default-features = false,git = "https://
 # pallet-ibc
 pallet-ibc = { version = "3.0.0-dev", default-features = false, path = "../../" }
 ## for ibc protocl
-ibc = { git = "https://github.com/octopus-network/ibc-rs.git", branch = "dev", default-features = false }
-ibc-proto = { git = "https://github.com/octopus-network/ibc-rs.git", branch = "dev", default-features = false }
+ibc = { git = "https://github.com/octopus-network/hermes.git", branch = "cs/for-hermes-1.0", default-features = false }
+ibc-proto = { git = "https://github.com/octopus-network/hermes.git", branch = "cs/for-hermes-1.0", default-features = false }
 tendermint-proto = { version = "=0.23.7", default-features = false }
 
 [dev-dependencies]
